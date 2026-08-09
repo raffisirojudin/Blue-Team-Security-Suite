@@ -18,10 +18,11 @@ st.title("🛡️ Blue Team Security Suite")
 st.caption("Platform analisis keamanan defensif terpadu untuk pengujian Email Phishing dan Audit Keamanan Web/SSL.")
 
 # Navigasi Modul Utama (Top Tabs)
-modul_email, modul_web, modul_hash = st.tabs([
-    "📩 Modul 1: Email Header & Phishing Analyzer",
+modul_email, modul_web, modul_hash, modul_dns = st.tabs([
+    "📧 Modul 1: Email Header & Phishing Analyzer", 
     "🌐 Modul 2: Website Security Headers & SSL Auditor",
-    "🔑 Modul 3: File Hash & Integrity Checker"
+    "🔑 Modul 3: File Hash & Integrity Checker",
+    "🔍 Modul 4: DNS Security Inspector"
 ])
 
 # ==============================================================================
@@ -329,6 +330,91 @@ with modul_hash:
 
         if expected_hash:
             if expected_hash in [md5_hash, sha1_hash, sha256_hash]:
+
+# ==============================================================================
+# MODUL 4: DNS SECURITY INSPECTOR
+# ==============================================================================
+with modul_dns:
+    st.markdown("### 🔍 DNS Security Inspector")
+    st.write("Periksa rekod DNS utama (A, MX, NS) serta keberadaan proteksi email tingkat domain (**SPF** & **DMARC**).")
+
+    domain_input = st.text_input("Masukkan Nama Domain Target:", placeholder="contoh: google.com atau github.com", key="input_dns_domain").strip()
+    btn_dns = st.button("🔍 Cek Rekod DNS", type="primary", key="btn_dns_check")
+
+    if btn_dns and domain_input:
+        # Bersihkan input dari http/https jika ketikan user ada URL-nya
+        clean_domain = domain_input.replace("https://", "").replace("http://", "").split("/")[0]
+        st.info(f"🔍 Mengambil data DNS untuk domain: `{clean_domain}`")
+
+        import dns.resolver
+
+        def fetch_dns(domain, rtype):
+            try:
+                answers = dns.resolver.resolve(domain, rtype)
+                return [str(rdata) for rdata in answers]
+            except Exception:
+                return []
+
+        # Ambil Rekod DNS
+        records_a = fetch_dns(clean_domain, 'A')
+        records_mx = fetch_dns(clean_domain, 'MX')
+        records_ns = fetch_dns(clean_domain, 'NS')
+        records_txt = fetch_dns(clean_domain, 'TXT')
+        records_dmarc = fetch_dns(f"_dmarc.{clean_domain}", 'TXT')
+
+        tab_dns1, tab_dns2 = st.tabs(["📋 Rekod DNS Jaringan", "🔐 Keamanan Email Domain (SPF & DMARC)"])
+
+        with tab_dns1:
+            st.subheader("🌐 Informasi Alamat IP & Server Domain")
+            col_dns1, col_dns2 = st.columns(2)
+            
+            with col_dns1:
+                st.write("**A Records (IP Address Web Server):**")
+                if records_a:
+                    for ip in records_a:
+                        st.code(ip, language="text")
+                else:
+                    st.warning("Tidak ditemukan rekod A.")
+
+                st.write("**NS Records (Nameserver):**")
+                if records_ns:
+                    for ns in records_ns:
+                        st.code(ns, language="text")
+                else:
+                    st.warning("Tidak ditemukan rekod NS.")
+
+            with col_dns2:
+                st.write("**MX Records (Mail Exchange Server):**")
+                if records_mx:
+                    for mx in records_mx:
+                        st.code(mx, language="text")
+                else:
+                    st.warning("Tidak ditemukan rekod MX.")
+
+        with tab_dns2:
+            st.subheader("🛡️ Status Konfigurasi Keamanan Email")
+            
+            # Pengecekan SPF Record
+            spf_found = [txt for txt in records_txt if "v=spf1" in txt]
+            st.write("**SPF Record (Sender Policy Framework):**")
+            if spf_found:
+                st.success("✅ **SPF Ditemukan!** Domain ini membatasi IP server yang berhak mengirim email atas namaya.")
+                for spf in spf_found:
+                    st.code(spf, language="text")
+            else:
+                st.error("❌ **SPF Tidak Ditemukan!** Domain ini belum mempublikasikan daftar server email resminya.")
+
+            st.markdown("---")
+
+            # Pengecekan DMARC Record
+            dmarc_found = [txt for txt in records_dmarc if "v=DMARC1" in txt]
+            st.write("**DMARC Record (Policy Rule):**")
+            if dmarc_found:
+                st.success("✅ **DMARC Ditemukan!** Domain ini instruksikan server penerima untuk menolak email palsu.")
+                for dmarc in dmarc_found:
+                    st.code(dmarc, language="text")
+            else:
+                st.error("❌ **DMARC Tidak Ditemukan!** Domain tidak memiliki kebijakan perlindungan pemalsuan (*spoofing*).")                
                 st.success("✅ **INTEGRITAS TERVERIFIKASI!** Hash cocok. Berkas ini 100% asli dan belum pernah dimodifikasi.")
             else:
                 st.error("❌ **INTEGRITAS TIDAK COCOK!** Hash berbeda. Berkas mungkin telah dimodifikasi, rusak (corrupt), atau telah disusupi kode berbahaya.")
