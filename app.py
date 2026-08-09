@@ -18,8 +18,8 @@ st.title("🛡️ Blue Team Security Suite")
 st.caption("Platform analisis keamanan defensif terpadu untuk pengujian Email Phishing dan Audit Keamanan Web/SSL.")
 
 # Navigasi Modul Utama (Top Tabs)
-modul_email, modul_web = st.tabs([
-    "📧 Modul 1: Email Header & Phishing Analyzer", 
+modul_email, modul_web, modul_hash = st.tabs([
+    "📩 Modul 1: Email Header & Phishing Analyzer",
     "🌐 Modul 2: Website Security Headers & SSL Auditor",
     "🔑 Modul 3: File Hash & Integrity Checker"
 ])
