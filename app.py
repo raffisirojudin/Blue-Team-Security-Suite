@@ -10,12 +10,14 @@ import ssl
 import socket
 from urllib.parse import urlparse
 from datetime import datetime
+import hashlib
+import dns.resolver
 
 # Konfigurasi Halaman Web
 st.set_page_config(page_title="Blue Team Security Suite", page_icon="🛡️", layout="wide")
 
 st.title("🛡️ Blue Team Security Suite")
-st.caption("Platform analisis keamanan defensif terpadu untuk pengujian Email Phishing dan Audit Keamanan Web/SSL.")
+st.caption("Platform analisis keamanan defensif terpadu untuk pengujian Email Phishing, Audit Web/SSL, Integritas Hash, dan Rekod DNS.")
 
 # Navigasi Modul Utama (Top Tabs)
 modul_email, modul_web, modul_hash, modul_dns = st.tabs([
@@ -222,7 +224,7 @@ with modul_web:
         ssl_info = audit_ssl(domain)
 
         if http_error:
-            st.error(f"❌ Gagal menghubung situs target: `{http_error}`.")
+            st.error(f"❌ Gagal menghubungi situs target: `{http_error}`.")
         else:
             skor_total = 0
             status_headers = []
@@ -272,17 +274,17 @@ with modul_web:
                         terdapat_leak = True
                         st.error(f"🚨 **Disclosed Header:** `{leak}: {val}`")
                 if not terdapat_leak:
-                    st.success("🎉 Tidak ada kebetoran header versi server terdeteksi.")
+                    st.success("🎉 Tidak ada kebocoran header versi server terdeteksi.")
 
             with web_tab4:
                 st.markdown("### Nginx Server Code")
                 st.code("""add_header Strict-Transport-Security "max-age=31536000; includeSubDomains" always;
 add_header X-Frame-Options "SAMEORIGIN" always;
-
 add_header X-Content-Type-Options "nosniff" always;
 add_header Referrer-Policy "strict-origin-when-cross-origin" always;
 server_tokens off;""", language="nginx")
-                
+
+
 # ==============================================================================
 # MODUL 3: FILE HASH & INTEGRITY CHECKER
 # ==============================================================================
@@ -294,8 +296,6 @@ with modul_hash:
 
     if uploaded_file is not None:
         file_bytes = uploaded_file.getvalue()
-        
-        import hashlib
         
         md5_hash = hashlib.md5(file_bytes).hexdigest()
         sha1_hash = hashlib.sha1(file_bytes).hexdigest()
@@ -330,6 +330,7 @@ with modul_hash:
             else:
                 st.error("❌ **INTEGRITAS TIDAK COCOK!** Hash berbeda. Berkas mungkin telah dimodifikasi, rusak (corrupt), atau telah disusupi kode berbahaya.")
 
+
 # ==============================================================================
 # MODUL 4: DNS SECURITY INSPECTOR
 # ==============================================================================
@@ -341,11 +342,8 @@ with modul_dns:
     btn_dns = st.button("🔍 Cek Rekod DNS", type="primary", key="btn_dns_check")
 
     if btn_dns and domain_input:
-        # Bersihkan input dari http/https jika ketikan user ada URL-nya
         clean_domain = domain_input.replace("https://", "").replace("http://", "").split("/")[0]
         st.info(f"🔍 Mengambil data DNS untuk domain: `{clean_domain}`")
-
-        import dns.resolver
 
         def fetch_dns(domain, rtype):
             try:
@@ -354,7 +352,6 @@ with modul_dns:
             except Exception:
                 return []
 
-        # Ambil Rekod DNS
         records_a = fetch_dns(clean_domain, 'A')
         records_mx = fetch_dns(clean_domain, 'MX')
         records_ns = fetch_dns(clean_domain, 'NS')
@@ -393,7 +390,6 @@ with modul_dns:
         with tab_dns2:
             st.subheader("🛡️ Status Konfigurasi Keamanan Email")
             
-            # Pengecekan SPF Record
             spf_found = [txt for txt in records_txt if "v=spf1" in txt]
             st.write("**SPF Record (Sender Policy Framework):**")
             if spf_found:
@@ -405,15 +401,11 @@ with modul_dns:
 
             st.markdown("---")
 
-            # Pengecekan DMARC Record
             dmarc_found = [txt for txt in records_dmarc if "v=DMARC1" in txt]
             st.write("**DMARC Record (Policy Rule):**")
             if dmarc_found:
-                st.success("✅ **DMARC Ditemukan!** Domain ini instruksikan server penerima untuk menolak email palsu.")
+                st.success("✅ **DMARC Ditemukan!** Domain ini menginstruksikan server penerima untuk menolak email palsu.")
                 for dmarc in dmarc_found:
                     st.code(dmarc, language="text")
             else:
-                st.error("❌ **DMARC Tidak Ditemukan!** Domain tidak memiliki kebijakan perlindungan pemalsuan (*spoofing*).")                
-                st.success("✅ **INTEGRITAS TERVERIFIKASI!** Hash cocok. Berkas ini 100% asli dan belum pernah dimodifikasi.")
-            else:
-                st.error("❌ **INTEGRITAS TIDAK COCOK!** Hash berbeda. Berkas mungkin telah dimodifikasi, rusak (corrupt), atau telah disusupi kode berbahaya.")
+                st.error("❌ **DMARC Tidak Ditemukan!** Domain tidak memiliki kebijakan perlindungan pemalsuan (*spoofing*).")
