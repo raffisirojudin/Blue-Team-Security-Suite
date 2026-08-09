@@ -21,6 +21,7 @@ st.caption("Platform analisis keamanan defensif terpadu untuk pengujian Email Ph
 modul_email, modul_web = st.tabs([
     "📧 Modul 1: Email Header & Phishing Analyzer", 
     "🌐 Modul 2: Website Security Headers & SSL Auditor"
+    "🔑 Modul 3: File Hash & Integrity Checker"
 ])
 
 # ==============================================================================
@@ -276,6 +277,58 @@ with modul_web:
                 st.markdown("### Nginx Server Code")
                 st.code("""add_header Strict-Transport-Security "max-age=31536000; includeSubDomains" always;
 add_header X-Frame-Options "SAMEORIGIN" always;
+
 add_header X-Content-Type-Options "nosniff" always;
 add_header Referrer-Policy "strict-origin-when-cross-origin" always;
 server_tokens off;""", language="nginx")
+                
+# ==============================================================================
+# MODUL 3: FILE HASH & INTEGRITY CHECKER
+# ==============================================================================
+with modul_hash:
+    st.markdown("### 🔑 File Hash & Integrity Checker")
+    st.write("Hitung nilai cryptographic hash (MD5, SHA-1, SHA-256) untuk memverifikasi integritas dan keaslian berkas.")
+
+    uploaded_file = st.file_uploader("Unggah Berkas Apapun (PDF, EXE, ZIP, Gambar, dll.):", type=None, key="uploader_hash_file")
+
+    if uploaded_file is not None:
+        # Membaca data berkas
+        file_bytes = uploaded_file.getvalue()
+        
+        # Perhitungan Hash menggunakan library bawaan Python 'hashlib'
+        import hashlib
+        
+        md5_hash = hashlib.md5(file_bytes).hexdigest()
+        sha1_hash = hashlib.sha1(file_bytes).hexdigest()
+        sha256_hash = hashlib.sha256(file_bytes).hexdigest()
+
+        # Tampilkan Metadata Berkas
+        st.subheader("📄 Informasi Berkas")
+        col_f1, col_f2 = st.columns(2)
+        col_f1.write(f"**Nama Berkas:** `{uploaded_file.name}`")
+        col_f2.write(f"**Ukuran Berkas:** `{len(file_bytes) / 1024:.2f} KB` ({len(file_bytes)} bytes)")
+
+        st.markdown("---")
+        st.subheader("📊 Hasil Perhitungan Cryptographic Hash")
+        
+        st.write("**MD5 Hash:**")
+        st.code(md5_hash, language="text")
+        
+        st.write("**SHA-1 Hash:**")
+        st.code(sha1_hash, language="text")
+        
+        st.write("**SHA-256 Hash (Standar Keamanan Saat Ini):**")
+        st.code(sha256_hash, language="text")
+
+        # Fitur Pembanding Hash (Integrity Check)
+        st.markdown("---")
+        st.subheader("🔍 Verifikasi Pembanding (Integrity Verification)")
+        st.caption("Tempelkan hash resmi dari pembuat software / vendor di sini untuk mencocokkan keaslian berkas.")
+        
+        expected_hash = st.text_input("Masukkan Hash Pembanding / Hash Resmi Vendor:", placeholder="Contoh: a1b2c3d4...", key="input_expected_hash").strip().lower()
+
+        if expected_hash:
+            if expected_hash in [md5_hash, sha1_hash, sha256_hash]:
+                st.success("✅ **INTEGRITAS TERVERIFIKASI!** Hash cocok. Berkas ini 100% asli dan belum pernah dimodifikasi.")
+            else:
+                st.error("❌ **INTEGRITAS TIDAK COCOK!** Hash berbeda. Berkas mungkin telah dimodifikasi, rusak (corrupt), atau telah disusupi kode berbahaya.")
