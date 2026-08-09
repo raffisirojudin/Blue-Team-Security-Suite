@@ -293,17 +293,14 @@ with modul_hash:
     uploaded_file = st.file_uploader("Unggah Berkas Apapun (PDF, EXE, ZIP, Gambar, dll.):", type=None, key="uploader_hash_file")
 
     if uploaded_file is not None:
-        # Membaca data berkas
         file_bytes = uploaded_file.getvalue()
         
-        # Perhitungan Hash menggunakan library bawaan Python 'hashlib'
         import hashlib
         
         md5_hash = hashlib.md5(file_bytes).hexdigest()
         sha1_hash = hashlib.sha1(file_bytes).hexdigest()
         sha256_hash = hashlib.sha256(file_bytes).hexdigest()
 
-        # Tampilkan Metadata Berkas
         st.subheader("📄 Informasi Berkas")
         col_f1, col_f2 = st.columns(2)
         col_f1.write(f"**Nama Berkas:** `{uploaded_file.name}`")
@@ -321,19 +318,18 @@ with modul_hash:
         st.write("**SHA-256 Hash (Standar Keamanan Saat Ini):**")
         st.code(sha256_hash, language="text")
 
-        # Fitur Pembanding Hash (Integrity Check)
         st.markdown("---")
         st.subheader("🔍 Verifikasi Pembanding (Integrity Verification)")
         st.caption("Tempelkan hash resmi dari pembuat software / vendor di sini untuk mencocokkan keaslian berkas.")
         
         expected_hash = st.text_input("Masukkan Hash Pembanding / Hash Resmi Vendor:", placeholder="Contoh: a1b2c3d4...", key="input_expected_hash").strip().lower()
 
-       if expected_hash:
+        if expected_hash:
             if expected_hash in [md5_hash, sha1_hash, sha256_hash]:
                 st.success("✅ **INTEGRITAS TERVERIFIKASI!** Hash cocok. Berkas ini 100% asli dan belum pernah dimodifikasi.")
             else:
                 st.error("❌ **INTEGRITAS TIDAK COCOK!** Hash berbeda. Berkas mungkin telah dimodifikasi, rusak (corrupt), atau telah disusupi kode berbahaya.")
-                
+
 # ==============================================================================
 # MODUL 4: DNS SECURITY INSPECTOR
 # ==============================================================================
