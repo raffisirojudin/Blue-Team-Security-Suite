@@ -621,10 +621,10 @@ with modul_exif:
                     parsed_exif[tag_name] = value
 
                 # Tampilkan Informasi Kunci
-                st.write(f"**Merek Perangkat:** `{parsed_exif.get('Make', 'Tidak ada')}`")
-                st.write(f"**Model Perangkat:** `{parsed_exif.get('Model', 'Tidak ada')}`")
-                st.write(f"**Waktu Pengambilan:** `{parsed_exif.get('DateTimeOriginal', 'Tidak ada')}`")
-                st.write(f"**Software/OS:** `{parsed_exif.get('Software', 'Tidak ada')}`")
+                st.write(f"**Merek Perangkat:** `{parsed_exif.get('Make') or 'Tidak ada'}`")
+                st.write(f"**Model Perangkat:** `{parsed_exif.get('Model') or 'Tidak ada'}`")
+                st.write(f"**Waktu Pengambilan:** `{parsed_exif.get('DateTimeOriginal') or 'Tidak ada'}`")
+                st.write(f"**Software/OS:** `{parsed_exif.get('Software') or 'Tidak ada'}`")
 
                 # Cek Adanya GPS
                 if 'GPSInfo' in parsed_exif:
