@@ -637,7 +637,7 @@ with modul_exif:
         st.markdown("---")
         st.subheader("🛡️ Pembersihan Metadata (Sanitizing)")
         
-        # Proses Pembersihan Metadata & Konversi Mode Gambar agar Aman
+        # Proses Pembersihan Metadata & Konversi Mode Gambar
         clean_image = image.convert("RGB")
 
         # Simpan ke buffer memori untuk diunduh
@@ -645,13 +645,4 @@ with modul_exif:
         clean_image.save(buf, format="JPEG")
         byte_im = buf.getvalue()
 
-        st.download_button(
-            label="⬇️ Unduh Foto Steril (Tanpa Metadata)",
-            data=byte_im,
-            file_name=f"steril_{uploaded_img.name}",
-            mime="image/jpeg",
-            type="primary"
-        )
-            mime="image/jpeg",
-            type="primary"
-        )
+        st.download_button(label="⬇️ Unduh Foto Steril (Tanpa Metadata)", data=byte_im, file_name=f"steril_{uploaded_img.name}", mime="image/jpeg", type="primary")
