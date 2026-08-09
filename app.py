@@ -587,3 +587,69 @@ with modul_encode:
         else:
             st.code(hasil, language="text")
             st.success("✅ Proses konversi berhasil diselesaikan!")
+
+# ==============================================================================
+# MODUL 7: EXIF METADATA INSPECTOR & SANITIZER
+# ==============================================================================
+with modul_exif:
+    st.markdown("### 🖼️ EXIF Metadata Inspector & Sanitizer")
+    st.write("Deteksi lokasi GPS tersembunyi, informasi perangkat, dan bersihkan metadata foto demi menjaga privasi.")
+
+    from PIL import Image
+    from PIL.ExifTags import TAGS, GPSTAGS
+    import io
+
+    uploaded_img = st.file_uploader("Unggah Foto (JPG / JPEG / PNG):", type=["jpg", "jpeg", "png"], key="uploader_exif")
+
+    if uploaded_img:
+        image = Image.open(uploaded_img)
+        
+        col_img1, col_img2 = st.columns([1, 1])
+        with col_img1:
+            st.image(image, caption="Foto Target", use_column_width=True)
+
+        with col_img2:
+            st.subheader("🔍 Metadata Terdeteksi")
+            
+            exif_data = image._getexif() if hasattr(image, '_getexif') else None
+            parsed_exif = {}
+
+            if exif_data:
+                for tag_id, value in exif_data.items():
+                    tag_name = TAGS.get(tag_id, tag_id)
+                    parsed_exif[tag_name] = value
+
+                # Tampilkan Informasi Kunci
+                st.write(f"**Merek Perangkat:** `{parsed_exif.get('Make', 'Tidak ada')}`")
+                st.write(f"**Model Perangkat:** `{parsed_exif.get('Model', 'Tidak ada')}`")
+                st.write(f"**Waktu Pengambilan:** `{parsed_exif.get('DateTimeOriginal', 'Tidak ada')}`")
+                st.write(f"**Software/OS:** `{parsed_exif.get('Software', 'Tidak ada')}`")
+
+                # Cek Adanya GPS
+                if 'GPSInfo' in parsed_exif:
+                    st.error("🚨 **DETEKSI LOKASI GPS!** Foto ini mengandung koordinat lokasi fisik pengambilan gambar.")
+                else:
+                    st.success("✅ Tidak ditemukan data lokasi GPS pada berkas ini.")
+            else:
+                st.info("ℹ️ Foto ini tidak mengandung metadata EXIF (mungkin sudah dibersihkan atau diunggah dari aplikasi yang menghapus EXIF).")
+
+        st.markdown("---")
+        st.subheader("🛡️ Pembersihan Metadata (Sanitizing)")
+        
+        # Proses Pembersihan Metadata
+        data_murni = list(image.getdata())
+        clean_image = Image.new(image.mode, image.size)
+        clean_image.putdata(data_murni)
+
+        # Simpan ke buffer memori untuk diunduh
+        buf = io.BytesIO()
+        clean_image.save(buf, format="JPEG")
+        byte_im = buf.getvalue()
+
+        st.download_button(
+            label="⬇️ Unduh Foto Steril (Tanpa Metadata)",
+            data=byte_im,
+            file_name=f"steril_{uploaded_img.name}",
+            mime="image/jpeg",
+            type="primary"
+        )
