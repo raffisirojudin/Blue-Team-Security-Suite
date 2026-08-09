@@ -5,23 +5,16 @@ from email.parser import BytesParser, Parser
 import re
 from bs4 import BeautifulSoup
 import pandas as pd
-import requests
 
 # Konfigurasi Halaman
 st.set_page_config(page_title="Email Header & Phishing Analyzer", page_icon="🛡️", layout="wide")
 
-st.title("🛡️ Email Header & Phishing Analyzer + Threat Intel")
-st.caption("Alat analisis defensif untuk mendeteksi keaslian pengirim dan mengecek reputasi IP/URL via API Gratis.")
+st.title("🛡️ Email Header & Phishing Analyzer")
+st.caption("Alat analisis defensif untuk mendeteksi keaslian pengirim dan indikasi manipulasi email.")
 
-# Sidebar - Sumber Email
+# Sidebar Pilihan Input
 st.sidebar.header("📥 Sumber Email")
 mode_input = st.sidebar.radio("Pilih Cara Unggah:", ["File .EML", "Tempel Raw Header (Teks)"])
-
-# Sidebar - API Keys (Opsional & Gratis)
-st.sidebar.markdown("---")
-st.sidebar.header("🔑 Kunci API Threat Intel (Gratis)")
-abuseipdb_key = st.sidebar.text_input("AbuseIPDB API Key:", type="password", help="Dapatkan gratis di abuseipdb.com (1.000 req/hari)")
-virustotal_key = st.sidebar.text_input("VirusTotal API Key:", type="password", help="Dapatkan gratis di virustotal.com (500 req/hari)")
 
 raw_email_obj = None
 
@@ -34,33 +27,14 @@ else:
     if header_text.strip():
         raw_email_obj = Parser(policy=policy.default).parsestr(header_text)
 
-# Fungsi Extractor & Integrasi API
-def ekstrak_ip(text):
-    """Mengekstrak alamat IPv4 dari teks header."""
-    ip_pattern = r'\b(?:[0-9]{1,3}\.){3}[0-9]{1,3}\b'
-    ips = re.findall(ip_pattern, text)
-    # Filter IP privat/lokal (127.0.0.1, 192.168.x.x, 10.x.x.x, 172.16-31.x.x)
-    public_ips = []
-    for ip in ips:
-        if not (ip.startswith("127.") or ip.startswith("10.") or ip.startswith("192.168.") or ip.startswith("172.16.")):
-            public_ips.append(ip)
-    return list(dict.fromkeys(public_ips))  # Hapus duplikat
-
-def cek_abuseipdb(ip, api_key):
-    """Pemeriksaan reputasi IP menggunakan API AbuseIPDB."""
-    url = 'https://api.abuseipdb.com/api/v2/check'
-    headers = {'Accept': 'application/json', 'Key': api_key}
-    params = {'ipAddress': ip, 'maxAgeInDays': '90'}
-    try:
-        res = requests.get(url, headers=headers, params=params, timeout=5)
-        if res.status_code == 200:
-            return res.json()['data']
-    except Exception:
-        pass
-    return None
+# Fungsi Pendukung
+def ekstrak_url_dari_text(text):
+    """Mencari seluruh URL di dalam teks biasa."""
+    url_pattern = r'https?://[^\s<>"]+|www\.[^\s<>"]+'
+    return re.findall(url_pattern, text)
 
 def ekstrak_url_dari_html(html_content):
-    """Mengekstrak tautan dari HTML beserta Teks Visualnya."""
+    """Mengekstrak tautan dari HTML beserta Teks Tautan (Anchor Text)."""
     soup = BeautifulSoup(html_content, 'html.parser')
     links = []
     for a in soup.find_all('a', href=True):
@@ -72,10 +46,10 @@ def ekstrak_url_dari_html(html_content):
 
 # Pemrosesan jika data email tersedia
 if raw_email_obj:
-    tab1, tab2, tab3 = st.tabs(["📋 Ringkasan & Autentikasi", "🛤️ Rute Transit & Cek IP", "🔗 Analisis Tautan & URL"])
+    tab1, tab2, tab3 = st.tabs(["📋 Ringkasan & Autentikasi", "🛤️ Rute Transit (Received Hops)", "🔗 Analisis Tautan & URL"])
 
     # --------------------------------------------------------------------------
-    # TAB 1: RINGKASAN & AUTENTIKASI
+    # TAB 1: RINGKASAN & STATUS AUTENTIKASI (SPF/DKIM/DMARC)
     # --------------------------------------------------------------------------
     with tab1:
         st.subheader("📧 Metadata Utama Email")
@@ -90,20 +64,23 @@ if raw_email_obj:
             st.write(f"**Date:** `{raw_email_obj.get('Date', 'N/A')}`")
             st.write(f"**Message-ID:** `{raw_email_obj.get('Message-ID', 'N/A')}`")
 
-        # Peringatan dini jika Reply-To berbeda dengan From
+        # Peringatan dini jika Reply-To berbeda dengan From (Indikasi Phishing)
         from_hdr = str(raw_email_obj.get('From', ''))
         reply_hdr = str(raw_email_obj.get('Reply-To', ''))
         if reply_hdr and reply_hdr != from_hdr:
-            st.warning("⚠️ **Perhatian:** Alamat `Reply-To` berbeda dengan `From`. Jawaban email ini akan terkirim ke alamat lain!")
+            st.warning("⚠️ **Perhatian:** Alamat `Reply-To` berbeda dengan `From`. Jawaban email ini akan terkirim ke alamat yang berbeda dari pengirim yang terlihat!")
 
         st.markdown("---")
         st.subheader("🔑 Hasil Validasi Autentikasi Email")
 
-        auth_results = str(raw_email_obj.get('Authentication-Results', ''))
-        received_spf = str(raw_email_obj.get('Received-SPF', ''))
-        auth_text = f"{auth_results} {received_spf}".lower()
+        auth_results = raw_email_obj.get('Authentication-Results', '')
+        received_spf = raw_email_obj.get('Received-SPF', '')
 
         col_spf, col_dkim, col_dmarc = st.columns(3)
+
+        # Pemeriksaan Sederhana Keyword Pass/Fail
+        auth_text = f"{auth_results} {received_spf}".lower()
+
         with col_spf:
             if "spf=pass" in auth_text or "pass" in received_spf.lower():
                 st.success("✅ **SPF:** PASS")
@@ -128,75 +105,73 @@ if raw_email_obj:
             else:
                 st.info("ℹ️ **DMARC:** Tidak Terdeteksi")
 
+        with st.expander("📄 Lihat Raw Authentication Header"):
+            st.code(f"Authentication-Results: {auth_results}\nReceived-SPF: {received_spf}")
+
     # --------------------------------------------------------------------------
-    # TAB 2: RUTE TRANSIT & CEK REPUTASI IP (ABUSEIPDB)
+    # TAB 2: RUTE TRANSIT EMAIL (RECEIVED HOPS)
     # --------------------------------------------------------------------------
     with tab2:
-        st.subheader("🛤️ Melacak Perjalanan Server Email & Reputasi IP")
-        
+        st.subheader("🛤️ Melacak Perjalanan Server Email (Hops)")
+        st.write("Email berpindah dari server pengirim awal ke server penerima. Urutan terbawah adalah server paling awal.")
+
         received_headers = raw_email_obj.get_all('Received', [])
-        all_text = " ".join(received_headers) if received_headers else ""
-        extracted_ips = ekstrak_ip(all_text)
-
-        if extracted_ips:
-            st.write(f"Terdeteksi **{len(extracted_ips)} Alamat IP Publik** dalam perjalanan email.")
+        if received_headers:
+            hops_data = []
+            for idx, hop in enumerate(reversed(received_headers), 1):
+                hops_data.append({
+                    "Langkah": f"Hop #{idx}",
+                    "Detail Server / IP Transit": hop.strip().replace("\n", " ").replace("\t", " ")
+                })
             
-            for ip in extracted_ips:
-                with st.expander(f"📍 Analisis IP: {ip}"):
-                    st.write(f"**IP Address:** `{ip}`")
-                    
-                    if abuseipdb_key:
-                        data_ip = cek_abuseipdb(ip, abuseipdb_key)
-                        if data_ip:
-                            skor = data_ip.get('abuseConfidenceScore', 0)
-                            negara = data_ip.get('countryCode', 'N/A')
-                            isp = data_ip.get('isp', 'N/A')
-                            total_laporan = data_ip.get('totalReports', 0)
-
-                            if skor > 50:
-                                st.error(f"🚨 **SKOR ANCAMAN TINGGI:** {skor}% Abuse Confidence!")
-                            elif skor > 20:
-                                st.warning(f"⚠️ **SKOR SEDANG:** {skor}% Abuse Confidence.")
-                            else:
-                                st.success(f"✅ **IP Bersih:** Skor Penyalahgunaan {skor}%")
-
-                            st.write(f"* **Negara Asal:** `{negara}`")
-                            st.write(f"* **Penyedia Layanan (ISP):** `{isp}`")
-                            st.write(f"* **Total Laporan Kejahatan:** `{total_laporan} kali`")
-                        else:
-                            st.error("Gagal mengambil data dari API AbuseIPDB. Periksa Kunci API Anda.")
-                    else:
-                        st.info("💡 **TIPS:** Masukkan **AbuseIPDB API Key** di menu sebelah kiri (Sidebar) untuk melihat tingkat bahaya dan negara asal IP ini secara otomatis.")
+            st.table(pd.DataFrame(hops_data))
         else:
-            st.info("Tidak ditemukan alamat IP publik pada header 'Received'.")
+            st.info("Tidak ditemukan header 'Received' pada data yang dimasukkan.")
 
     # --------------------------------------------------------------------------
-    # TAB 3: EKSTRAKSI & ANALISIS URL
+    # TAB 3: EKSTRAKSI & DETEKSI URL
     # --------------------------------------------------------------------------
     with tab3:
         st.subheader("🔗 Deteksi Tautan / URL Tersembunyi")
 
         body_html = ""
+        body_text = ""
+
         if raw_email_obj.is_multipart():
             for part in raw_email_obj.walk():
-                if part.get_content_type() == 'text/html':
+                content_type = part.get_content_type()
+                if content_type == 'text/html':
                     body_html += part.get_payload(decode=True).decode(errors='ignore')
+                elif content_type == 'text/plain':
+                    body_text += part.get_payload(decode=True).decode(errors='ignore')
         else:
             if raw_email_obj.get_content_type() == 'text/html':
                 body_html = raw_email_obj.get_payload(decode=True).decode(errors='ignore')
+            else:
+                body_text = raw_email_obj.get_payload(decode=True).decode(errors='ignore')
 
+        found_links = []
         if body_html:
             found_links = ekstrak_url_dari_html(body_html)
             if found_links:
+                st.write("Daftar tautan dari format **HTML**:")
                 df_links = pd.DataFrame(found_links)
                 st.dataframe(df_links, use_container_width=True)
 
+                # Deteksi tautan tersembunyi/mengecoh
                 for item in found_links:
                     vis = item['Teks Tautan (Visual)']
                     target = item['URL Tujuan Asli']
                     if (vis.startswith("http://") or vis.startswith("https://")) and vis != target:
-                        st.error(f"🚨 **Indikasi Mismatch / Phishing!** Teks visual menampilkan `{vis}`, tetapi mengarahkan ke `{target}`.")
+                        st.error(f"🚨 **Indikasi Mismatch / Phishing!** Teks visual menampilkan `{vis}` tetapi tombol mengarah ke `{target}`.")
+        
+        elif body_text:
+            text_links = ekstrak_url_dari_text(body_text)
+            if text_links:
+                st.write("Daftar tautan dari format **Plain Text**:")
+                for url in set(text_links):
+                    st.code(url)
             else:
-                st.info("Tidak ada tautan HTML yang ditemukan.")
+                st.info("Tidak ditemukan tautan URL pada isi email.")
         else:
-            st.info("Format email ini tidak menggunakan HTML.")
+            st.info("Isi pesan email tidak dapat dibaca atau tidak mengandung tautan.")
