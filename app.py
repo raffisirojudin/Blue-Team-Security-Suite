@@ -650,96 +650,91 @@ with modul_exif:
 # ==============================================================================
 # MODUL 8: NETWORK AUTO-DISCOVERY & PORT SWEEPER
 # ==============================================================================
-# Pasang modul ini ke tab/with statement pilihan Anda (misal: with modul_network:)
-st.markdown("### 📡 Network Auto-Discovery & Port Sweeper")
-st.write("Temukan alamat IP perangkat lokal (Raspberry Pi, Printer, Smart TV, IP Cam) tanpa perlu masuk ke admin router.")
+with modul_network:
+    st.markdown("### 📡 Network Auto-Discovery & Port Sweeper")
+    st.write("Temukan alamat IP perangkat lokal (Raspberry Pi, Printer, Smart TV, IP Cam) tanpa perlu masuk ke admin router.")
 
-st.info("💡 **Catatan Operasional:** Untuk memindai Wi-Fi/LAN rumah atau kantor Anda (seperti range `192.168.x.x`), jalankan Streamlit ini secara lokal di PC/laptop Anda (`streamlit run app.py`).")
+    st.info("💡 **Catatan Operasional:** Untuk memindai Wi-Fi/LAN rumah atau kantor Anda (seperti range `192.168.x.x`), jalankan Streamlit ini secara lokal di PC/laptop Anda (`streamlit run app.py`).")
 
-import socket
-from concurrent.futures import ThreadPoolExecutor
-import pandas as pd
+    import socket
+    from concurrent.futures import ThreadPoolExecutor
+    import pandas as pd
 
-col_net1, col_net2 = st.columns([1, 1])
+    col_net1, col_net2 = st.columns([1, 1])
 
-with col_net1:
-    subnet_prefix = st.text_input("Subnet IP Target (Prefix):", value="192.168.1.", help="Contoh: 192.168.1. atau 192.168.0.")
-    range_ip = st.slider("Rentang IP (Host Range):", 1, 254, (1, 100))
+    with col_net1:
+        subnet_prefix = st.text_input("Subnet IP Target (Prefix):", value="192.168.1.", help="Contoh: 192.168.1. atau 192.168.0.")
+        range_ip = st.slider("Rentang IP (Host Range):", 1, 254, (1, 100))
 
-with col_net2:
-    # Port umum perangkat IoT/Lokal
-    ports_to_scan = st.multiselect(
-        "Port yang Dipindai:",
-        options=[22, 80, 443, 8080, 9100, 554, 445],
-        default=[22, 80, 443, 8080],
-        format_func=lambda x: {
-            22: "22 (SSH - Raspberry Pi / Linux)",
-            80: "80 (HTTP - Web UI / Router / Smart TV)",
-            443: "443 (HTTPS - Web Secure)",
-            8080: "8080 (Web UI Alternatif)",
-            9100: "9100 (RAW Printer)",
-            554: "554 (RTSP - IP Camera)",
-            445: "445 (SMB - File Sharing / Windows)"
-        }.get(x, str(x))
-    )
+    with col_net2:
+        ports_to_scan = st.multiselect(
+            "Port yang Dipindai:",
+            options=[22, 80, 443, 8080, 9100, 554, 445],
+            default=[22, 80, 443, 8080],
+            format_func=lambda x: {
+                22: "22 (SSH - Raspberry Pi / Linux)",
+                80: "80 (HTTP - Web UI / Router / Smart TV)",
+                443: "443 (HTTPS - Web Secure)",
+                8080: "8080 (Web UI Alternatif)",
+                9100: "9100 (RAW Printer)",
+                554: "554 (RTSP - IP Camera)",
+                445: "445 (SMB - File Sharing / Windows)"
+            }.get(x, str(x))
+        )
 
-def ping_host_port(target):
-    ip, port = target
-    try:
-        sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-        sock.settimeout(0.3) # Timeout cepat per IP
-        result = sock.connect_ex((ip, port))
-        sock.close()
-        if result == 0:
-            return (ip, port)
-    except:
-        pass
-    return None
+    def ping_host_port(target):
+        ip, port = target
+        try:
+            sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+            sock.settimeout(0.3)
+            result = sock.connect_ex((ip, port))
+            sock.close()
+            if result == 0:
+                return (ip, port)
+        except:
+            pass
+        return None
 
-if st.button("🚀 Mulai Pemindaian Jaringan", type="primary"):
-    if not ports_to_scan:
-        st.warning("⚠️ Pilih minimal satu port untuk dipindai.")
-    else:
-        ip_targets = [f"{subnet_prefix}{i}" for i in range(range_ip[0], range_ip[1] + 1)]
-        scan_list = [(ip, port) for ip in ip_targets for port in ports_to_scan]
-
-        total_scans = len(scan_list)
-        st.write(f"🔍 Memindai **{len(ip_targets)} IP** pada **{len(ports_to_scan)} port** (Total {total_scans} cek)...")
-        
-        progress_bar = st.progress(0)
-        found_devices = []
-
-        # Multi-threading untuk kecepatan pemindaian tinggi (100 thread sekaligus)
-        with ThreadPoolExecutor(max_workers=100) as executor:
-            for idx, res in enumerate(executor.map(ping_host_port, scan_list)):
-                progress_bar.progress((idx + 1) / total_scans)
-                if res:
-                    ip_found, port_found = res
-                    # Estimasi jenis alat berdasarkan port
-                    estimasi = {
-                        22: "Raspberry Pi / Linux Server / SSH",
-                        80: "Router Admin / Smart TV / Web Device",
-                        443: "Secure Web Interface",
-                        8080: "Web Dashboard / Proxy",
-                        9100: "Printer Wi-Fi / Network Printer",
-                        554: "IP Camera / CCTV",
-                        445: "NAS / Windows Share / Printer"
-                    }.get(port_found, "Perangkat Aktif")
-                    
-                    found_devices.append({
-                        "Alamat IP": ip_found,
-                        "Port Terbuka": port_found,
-                        "Estimasi Jenis Perangkat": estimasi,
-                        "Akses Web": f"http://{ip_found}:{port_found}" if port_found in [80, 8080] else "N/A"
-                    })
-
-        progress_bar.empty()
-
-        if found_devices:
-            st.success(f"✅ Pemindaian selesai! Ditemukan **{len(found_devices)}** layanan aktif.")
-            df_res = pd.DataFrame(found_devices)
-            
-            # Tampilkan Tabel Hasil Pemindaian
-            st.dataframe(df_res, use_container_width=True)
+    if st.button("🚀 Mulai Pemindaian Jaringan", type="primary"):
+        if not ports_to_scan:
+            st.warning("⚠️ Pilih minimal satu port untuk dipindai.")
         else:
-            st.warning("❌ Tidak ada perangkat aktif yang merespons pada subnet dan port yang dipilih.")
+            ip_targets = [f"{subnet_prefix}{i}" for i in range(range_ip[0], range_ip[1] + 1)]
+            scan_list = [(ip, port) for ip in ip_targets for port in ports_to_scan]
+
+            total_scans = len(scan_list)
+            st.write(f"🔍 Memindai **{len(ip_targets)} IP** pada **{len(ports_to_scan)} port** (Total {total_scans} cek)...")
+            
+            progress_bar = st.progress(0)
+            found_devices = []
+
+            with ThreadPoolExecutor(max_workers=100) as executor:
+                for idx, res in enumerate(executor.map(ping_host_port, scan_list)):
+                    progress_bar.progress((idx + 1) / total_scans)
+                    if res:
+                        ip_found, port_found = res
+                        estimasi = {
+                            22: "Raspberry Pi / Linux Server / SSH",
+                            80: "Router Admin / Smart TV / Web Device",
+                            443: "Secure Web Interface",
+                            8080: "Web Dashboard / Proxy",
+                            9100: "Printer Wi-Fi / Network Printer",
+                            554: "IP Camera / CCTV",
+                            445: "NAS / Windows Share / Printer"
+                        }.get(port_found, "Perangkat Aktif")
+                        
+                        found_devices.append({
+                            "Alamat IP": ip_found,
+                            "Port Terbuka": port_found,
+                            "Estimasi Jenis Perangkat": estimasi,
+                            "Akses Web": f"http://{ip_found}:{port_found}" if port_found in [80, 8080] else "N/A"
+                        })
+
+            progress_bar.empty()
+
+            if found_devices:
+                st.success(f"✅ Pemindaian selesai! Ditemukan **{len(found_devices)}** layanan aktif.")
+                df_res = pd.DataFrame(found_devices)
+                st.dataframe(df_res, use_container_width=True)
+            else:
+                st.warning("❌ Tidak ada perangkat aktif yang merespons pada subnet dan port yang dipilih.")
