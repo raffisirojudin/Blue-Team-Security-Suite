@@ -1,39 +1,42 @@
-# 🛡️ Email Header & Phishing Analyzer
+# 🛡️ Blue Team Security Suite
 
 ![Python](https://img.shields.io/badge/Python-3.8%2B-blue.svg)
 ![Streamlit](https://img.shields.io/badge/Streamlit-Framework-FF4B4B.svg)
-![Focus](https://img.shields.io/badge/Focus-Defensive%20Cybersecurity-green.svg)
+![Type](https://img.shields.io/badge/Security-Blue%20Team%20Defensive-green.svg)
 ![License](https://img.shields.io/badge/License-MIT-yellow.svg)
 
-Aplikasi web interaktif berbasis **Streamlit** dan **Python** yang dirancang untuk membantu analis keamanan (*Security Operations Center / SOC*) dan pengguna umum dalam mengevaluasi keaslian email, mendeteksi manipulasi *header*, serta mengidentifikasi indikasi serangan *phishing* secara cepat dan aman.
-
-Aplikasi ini bekerja **100% secara lokal** (*offline-ready*), sehingga data sensitif atau isi email tidak pernah dikirim ke server pihak ketiga.
+Platform keamanan siber berbasis **Streamlit** dan **Python** yang menggabungkan dua alat analisis defensif utama untuk membantu praktisi *Blue Team* dan analis *Security Operations Center (SOC)*.
 
 ---
 
-## ✨ Fitur Utama
+## ✨ Fitur Utama Platform
 
-- 📧 **Analisis Header Email (`.eml` / Raw Text):**
-  - Ekstraksi otomatis metadata penting (`From`, `To`, `Reply-To`, `Subject`, `Date`, `Message-ID`).
-  - **Deteksi Spoofing:** Membandingkan alamat `Reply-To` dan `From` untuk mendeteksi potensi pengalihan jawaban email (*mismatch warning*).
-- 🔑 **Validasi Otentikasi Email:**
-  - Pengecekan status **SPF** (*Sender Policy Framework*).
-  - Pengecekan status **DKIM** (*DomainKeys Identified Mail*).
-  - Pengecekan status **DMARC** (*Domain-based Message Authentication*).
-- 🛤️ **Pelacakan Rute Transit (Received Hops):**
-  - Merekam dan mengurutkan seluruh jejak perpindahan server email dari pengirim awal hingga masuk ke inbox penerima.
-- 🔗 **Analisis Tautan & Link Trap Detection:**
-  - Mengekstrak seluruh URL yang tertanam di dalam bodi HTML atau *plain text* email.
-  - **Deteksi Anchor Mismatch:** Mengidentifikasi secara otomatis jika teks visual link (misal: `https://bank-resmi.com`) mengarahkan ke URL tujuan yang berbeda.
+### 📧 1. Email Header & Phishing Analyzer
+* **Ekstraksi Metadata & Spoofing Alert:** Menganalisis header `.eml` dan memberi peringatan jika alamat `Reply-To` tidak cocok dengan `From`.
+* **Validasi Otentikasi Email:** Mengecek status **SPF**, **DKIM**, dan **DMARC**.
+* **Pelacakan Received Hops:** Mengurutkan jejak server transit email.
+* **Link Mismatch Detection:** Menandai tautan jika teks visual link berbeda dari URL tujuan sebenarnya.
+
+### 🌐 2. Website Security Headers & SSL Auditor
+* **Audit HTTP Security Headers:** Menilai keberadaan `HSTS`, `CSP`, `X-Frame-Options`, `X-Content-Type-Options`, dll.
+* **Sertifikat SSL/TLS Inspector:** Mengecek versi TLS, tanggal kedaluwarsa, dan penerbit (*Issuer*) sertifikat.
+* **Information Disclosure Check:** Mendeteksi kebocoran versi web server pada header HTTP.
+* **Panduan Perbaikan:** Menyediakan kode snippet untuk **Nginx**, **Apache**, dan **Cloudflare**.
 
 ---
 
-## 🚀 Cara Memulai
+## 🚀 Panduan Penggunaan Online
 
-### Prasyarat
-Pastikan Anda sudah menginstal **Python 3.8+** di komputer Anda.
+Aplikasi ini dapat diakses secara langsung tanpa instalasi lokal melalui **Streamlit Community Cloud**.
 
-### 1. Kloning Repositori
+### Menjalankan Secara Lokal (Opsional)
 ```bash
-git clone [https://github.com/USERNAME-ANDA/NAMA-REPO-ANDA.git](https://github.com/USERNAME-ANDA/NAMA-REPO-ANDA.git)
-cd NAMA-REPO-ANDA
+# 1. Clone Repositori
+git clone [https://github.com/USERNAME-ANDA/blue-team-security-suite.git](https://github.com/USERNAME-ANDA/blue-team-security-suite.git)
+cd blue-team-security-suite
+
+# 2. Install Library
+pip install -r requirements.txt
+
+# 3. Jalankan App
+streamlit run app.py
