@@ -328,9 +328,12 @@ with modul_hash:
         
         expected_hash = st.text_input("Masukkan Hash Pembanding / Hash Resmi Vendor:", placeholder="Contoh: a1b2c3d4...", key="input_expected_hash").strip().lower()
 
-        if expected_hash:
+       if expected_hash:
             if expected_hash in [md5_hash, sha1_hash, sha256_hash]:
-
+                st.success("✅ **INTEGRITAS TERVERIFIKASI!** Hash cocok. Berkas ini 100% asli dan belum pernah dimodifikasi.")
+            else:
+                st.error("❌ **INTEGRITAS TIDAK COCOK!** Hash berbeda. Berkas mungkin telah dimodifikasi, rusak (corrupt), atau telah disusupi kode berbahaya.")
+                
 # ==============================================================================
 # MODUL 4: DNS SECURITY INSPECTOR
 # ==============================================================================
