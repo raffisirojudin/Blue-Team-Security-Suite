@@ -597,7 +597,7 @@ with modul_exif:
     st.write("Deteksi lokasi GPS tersembunyi, informasi perangkat, dan bersihkan metadata foto demi menjaga privasi.")
 
     from PIL import Image
-    from PIL.ExifTags import TAGS, GPSTAGS
+    from PIL.ExifTags import TAGS
     import io
 
     uploaded_img = st.file_uploader("Unggah Foto (JPG / JPEG / PNG):", type=["jpg", "jpeg", "png"], key="uploader_exif")
@@ -607,7 +607,7 @@ with modul_exif:
         
         col_img1, col_img2 = st.columns([1, 1])
         with col_img1:
-            st.image(image, caption="Foto Target", use_column_width=True)
+            st.image(image, caption="Foto Target", use_container_width=True)
 
         with col_img2:
             st.subheader("🔍 Metadata Terdeteksi")
@@ -637,10 +637,8 @@ with modul_exif:
         st.markdown("---")
         st.subheader("🛡️ Pembersihan Metadata (Sanitizing)")
         
-        # Proses Pembersihan Metadata
-        data_murni = list(image.getdata())
-        clean_image = Image.new(image.mode, image.size)
-        clean_image.putdata(data_murni)
+        # Proses Pembersihan Metadata & Konversi Mode Gambar agar Aman
+        clean_image = image.convert("RGB")
 
         # Simpan ke buffer memori untuk diunduh
         buf = io.BytesIO()
@@ -651,6 +649,9 @@ with modul_exif:
             label="⬇️ Unduh Foto Steril (Tanpa Metadata)",
             data=byte_im,
             file_name=f"steril_{uploaded_img.name}",
+            mime="image/jpeg",
+            type="primary"
+        )
             mime="image/jpeg",
             type="primary"
         )
