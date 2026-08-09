@@ -20,11 +20,12 @@ st.title("🛡️ Blue Team Security Suite")
 st.caption("Platform analisis keamanan defensif terpadu untuk pengujian Email Phishing, Audit Web/SSL, Integritas Hash, dan Rekod DNS.")
 
 # Navigasi Modul Utama (Top Tabs)
-modul_email, modul_web, modul_hash, modul_dns = st.tabs([
+modul_email, modul_web, modul_hash, modul_dns, modul_pwd = st.tabs([
     "📧 Modul 1: Email Header & Phishing Analyzer", 
     "🌐 Modul 2: Website Security Headers & SSL Auditor",
     "🔑 Modul 3: File Hash & Integrity Checker",
-    "🔍 Modul 4: DNS Security Inspector"
+    "🔍 Modul 4: DNS Security Inspector",
+    "🔐 Modul 5: Password Entropy Evaluator"
 ])
 
 # ==============================================================================
@@ -409,3 +410,108 @@ with modul_dns:
                     st.code(dmarc, language="text")
             else:
                 st.error("❌ **DMARC Tidak Ditemukan!** Domain tidak memiliki kebijakan perlindungan pemalsuan (*spoofing*).")
+
+# ==============================================================================
+# MODUL 5: PASSWORD ENTROPY & CRACK TIME EVALUATOR
+# ==============================================================================
+with modul_pwd:
+    st.markdown("### 🔐 Password Entropy & Crack Time Evaluator")
+    st.write("Evaluasi kekuatan kata sandi menggunakan rumus matematis **Bit Entropy** ($E = L \\times \\log_2(R)$) serta estimasi waktu *brute-force*.")
+
+    col_p1, col_p2 = st.columns([2, 1])
+    with col_p1:
+        pwd_input = st.text_input("Masukkan Kata Sandi yang Ingin Diuji:", type="password", key="input_password_eval").strip()
+    with col_p2:
+        st.write("")
+        st.write("")
+        show_pwd = st.checkbox("Tampilkan Teks Kata Sandi", key="chk_show_pwd")
+
+    if show_pwd and pwd_input:
+        st.info(f"Teks Kata Sandi: `{pwd_input}`")
+
+    if pwd_input:
+        import math
+
+        # Hitung Variasi Karakter (Pool Size - R)
+        has_lower = bool(re.search(r'[a-z]', pwd_input))
+        has_upper = bool(re.search(r'[A-Z]', pwd_input))
+        has_digit = bool(re.search(r'\d', pwd_input))
+        has_symbol = bool(re.search(r'[^a-zA-Z0-9]', pwd_input))
+
+        pool_size = 0
+        if has_lower: pool_size += 26
+        if has_upper: pool_size += 26
+        if has_digit: pool_size += 10
+        if has_symbol: pool_size += 32
+
+        pwd_len = len(pwd_input)
+        
+        # Hitung Entropi (E = L * log2(R))
+        entropy = pwd_len * math.log2(pool_size) if pool_size > 0 else 0
+
+        # Estimasi Waktu Crack (Asumsi Hashcat GPU Rig Modern: 100 Miliar Guesses/Detik)
+        guesses_per_sec = 100_000_000_000
+        total_combinations = pool_size ** pwd_len if pool_size > 0 else 0
+        avg_attempts = total_combinations / 2
+        seconds_to_crack = avg_attempts / guesses_per_sec if guesses_per_sec > 0 else 0
+
+        # Format Tampilan Waktu
+        def format_crack_time(seconds):
+            if seconds < 1:
+                return "Instan (< 1 detik)"
+            minutes = seconds / 60
+            hours = minutes / 60
+            days = hours / 24
+            years = days / 365
+            if years > 1_000_000:
+                return f"{years/1_000_000:,.1f} Juta Tahun"
+            elif years >= 1:
+                return f"{years:,.1f} Tahun"
+            elif days >= 1:
+                return f"{days:,.1f} Hari"
+            elif hours >= 1:
+                return f"{hours:,.1f} Jam"
+            elif minutes >= 1:
+                return f"{minutes:,.1f} Menit"
+            else:
+                return f"{seconds:,.1f} Detik"
+
+        crack_time_str = format_crack_time(seconds_to_crack)
+
+        # Penilaian Kekuatan
+        if entropy < 40:
+            status_label = "Sangat Lemah"
+            status_color = "red"
+        elif entropy < 60:
+            status_label = "Sedang / Rentan"
+            status_color = "orange"
+        elif entropy < 80:
+            status_label = "Kuat"
+            status_color = "green"
+        else:
+            status_label = "Sangat Kuat (Sangat Aman)"
+            status_color = "blue"
+
+        st.markdown("---")
+        st.subheader("📊 Hasil Evaluasi Kekuatan")
+
+        col_m1, col_m2, col_m3 = st.columns(3)
+        col_m1.metric("Panjang Karakter (L)", f"{pwd_len} Karakter")
+        col_m2.metric("Skor Entropi", f"{entropy:.1f} bits")
+        col_m3.metric("Kategori Kekuatan", status_label)
+
+        st.write(f"⏱️ **Estimasi Waktu Brute-Force (Offline GPU Rig):** `{crack_time_str}`")
+
+        st.markdown("---")
+        st.subheader("📋 Analisis Variasi Karakter")
+        col_c1, col_c2, col_c3, col_c4 = st.columns(4)
+        col_c1.write(f"{'✅' if has_lower else '❌'} Huruf Kecil (a-z)")
+        col_c2.write(f"{'✅' if has_upper else '❌'} Huruf Besar (A-Z)")
+        col_c3.write(f"{'✅' if has_digit else '❌'} Angka (0-9)")
+        col_c4.write(f"{'✅' if has_symbol else '❌'} Simbol / Karakter Khusus")
+
+        # Rekomendasi Keamanan
+        if entropy < 60:
+            st.warning("⚠️ **Saran Perbaikan:** Tambahkan panjang kata sandi menjadi minimal 12–16 karakter dan kombinasikan huruf besar, angka, serta simbol khusus untuk meningkatkan bit entropi secara drastis.")
+        else:
+            st.success("🎉 Kata sandi ini memiliki variasi dan panjang yang sangat baik terhadap serangan *Brute-Force* offline!")
