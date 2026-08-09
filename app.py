@@ -20,12 +20,13 @@ st.title("🛡️ Blue Team Security Suite")
 st.caption("Platform analisis keamanan defensif terpadu untuk pengujian Email Phishing, Audit Web/SSL, Integritas Hash, dan Rekod DNS.")
 
 # Navigasi Modul Utama (Top Tabs)
-modul_email, modul_web, modul_hash, modul_dns, modul_pwd = st.tabs([
+modul_email, modul_web, modul_hash, modul_dns, modul_pwd, modul_encode = st.tabs([
     "📧 Modul 1: Email Header & Phishing Analyzer", 
     "🌐 Modul 2: Website Security Headers & SSL Auditor",
     "🔑 Modul 3: File Hash & Integrity Checker",
     "🔍 Modul 4: DNS Security Inspector",
-    "🔐 Modul 5: Password Entropy Evaluator"
+    "🔐 Modul 5: Password Entropy Evaluator",
+    "🔤 Modul 6: SOC Text & Payload Encoder / Decoder"
 ])
 
 # ==============================================================================
@@ -515,3 +516,74 @@ with modul_pwd:
             st.warning("⚠️ **Saran Perbaikan:** Tambahkan panjang kata sandi menjadi minimal 12–16 karakter dan kombinasikan huruf besar, angka, serta simbol khusus untuk meningkatkan bit entropi secara drastis.")
         else:
             st.success("🎉 Kata sandi ini memiliki variasi dan panjang yang sangat baik terhadap serangan *Brute-Force* offline!")
+
+# ==============================================================================
+# MODUL 6: SOC TEXT & PAYLOAD ENCODER / DECODER
+# ==============================================================================
+with modul_encode:
+    st.markdown("### 🔤 SOC Text & Payload Encoder / Decoder")
+    st.write("Lakukan konversi, enkoding, atau dekoding *payload* / *string* terselubung secara cepat untuk kebutuhan analisis insiden siber.")
+
+    import base64
+    import urllib.parse
+    import html
+
+    col_e1, col_e2 = st.columns([1, 2])
+    
+    with col_e1:
+        metode = st.selectbox(
+            "Pilih Format / Metode Konversi:",
+            ["Base64", "URL Encoding (Percent-encoding)", "Hexadecimal (Hex)", "HTML Entities"],
+            key="select_encode_method"
+        )
+        aksi = st.radio(
+            "Pilih Operasi:",
+            ["Decode (Dekode / Terjemahkan)", "Encode (Enkode / Acak)"],
+            key="radio_encode_action"
+        )
+
+    with col_e2:
+        input_text = st.text_area(
+            "Masukkan Teks / Payload Target di Sini:",
+            height=150,
+            placeholder="Contoh Base64: aHR0cHM6Ly9tYWxpY2lvdXMuc2l0ZQ==\nContoh Hex: 48656c6c6f",
+            key="area_encode_input"
+        ).strip()
+
+    if input_text:
+        hasil = ""
+        error_msg = None
+
+        try:
+            if aksi == "Decode (Dekode / Terjemahkan)":
+                if metode == "Base64":
+                    # Menangani padding base64 jika kurang
+                    padded_input = input_text + '=' * (-len(input_text) % 4)
+                    hasil = base64.b64decode(padded_input.encode()).decode('utf-8', errors='ignore')
+                elif metode == "URL Encoding (Percent-encoding)":
+                    hasil = urllib.parse.unquote(input_text)
+                elif metode == "Hexadecimal (Hex)":
+                    clean_hex = input_text.replace(" ", "").replace("0x", "").replace("\\x", "").replace("\n", "")
+                    hasil = bytes.fromhex(clean_hex).decode('utf-8', errors='ignore')
+                elif metode == "HTML Entities":
+                    hasil = html.unescape(input_text)
+            else: # Encode
+                if metode == "Base64":
+                    hasil = base64.b64encode(input_text.encode()).decode('utf-8')
+                elif metode == "URL Encoding (Percent-encoding)":
+                    hasil = urllib.parse.quote(input_text)
+                elif metode == "Hexadecimal (Hex)":
+                    hasil = input_text.encode().hex()
+                elif metode == "HTML Entities":
+                    hasil = html.escape(input_text)
+        except Exception as e:
+            error_msg = str(e)
+
+        st.markdown("---")
+        st.subheader("📤 Hasil Output Operations")
+
+        if error_msg:
+            st.error(f"❌ **Gagal Memproses Data!** Pastikan format teks input sesuai untuk metode `{metode}`. Detail Error: `{error_msg}`")
+        else:
+            st.code(hasil, language="text")
+            st.success("✅ Proses konversi berhasil diselesaikan!")
