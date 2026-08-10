@@ -628,6 +628,8 @@ with modul_encode:
     import urllib.parse
     import html
 
+    use_sample_enc = st.checkbox("Gunakan Sample Payload Simulasi", key="chk_sample_enc")
+
     col_e1, col_e2 = st.columns([1, 2])
     
     with col_e1:
@@ -642,13 +644,34 @@ with modul_encode:
             key="radio_encode_action"
         )
 
+    # Kamus Sample Payload Otomatis Berdasarkan Metode & Operasi
+    sample_payloads = {
+        ("Decode (Dekode / Terjemahkan)", "Base64"): "aHR0cHM6Ly9tYWxpY2lvdXMtcGhpc2hpbmctc2l0ZS5jb20vbG9naW4ucGhw",
+        ("Decode (Dekode / Terjemahkan)", "URL Encoding (Percent-encoding)"): "https%3A%2F%2Fmalicious-phishing-site.com%2Flogin.php%3Fuser%3Dadmin%26pass%3D12345",
+        ("Decode (Dekode / Terjemahkan)", "Hexadecimal (Hex)"): "68747470733a2f2f6d616c6963696f75732d7068697368696e672d736974652e636f6d",
+        ("Decode (Dekode / Terjemahkan)", "HTML Entities"): "&lt;script&gt;alert(&quot;Phishing Payload&quot;)&lt;/script&gt;",
+        ("Encode (Enkode / Acak)", "Base64"): "https://malicious-phishing-site.com/login.php",
+        ("Encode (Enkode / Acak)", "URL Encoding (Percent-encoding)"): "https://malicious-phishing-site.com/login.php?user=admin&pass=12345",
+        ("Encode (Enkode / Acak)", "Hexadecimal (Hex)"): "https://malicious-phishing-site.com",
+        ("Encode (Enkode / Acak)", "HTML Entities"): "<script>alert(\"Phishing Payload\")</script>"
+    }
+
     with col_e2:
-        input_text = st.text_area(
-            "Masukkan Teks / Payload Target di Sini:",
-            height=150,
-            placeholder="Contoh Base64: aHR0cHM6Ly9tYWxpY2lvdXMuc2l0ZQ==\nContoh Hex: 48656c6c6f",
-            key="area_encode_input"
-        ).strip()
+        if use_sample_enc:
+            default_val = sample_payloads.get((aksi, metode), "")
+            input_text = st.text_area(
+                "Masukkan Teks / Payload Target di Sini:",
+                value=default_val,
+                height=150,
+                key="area_encode_input_sample"
+            ).strip()
+        else:
+            input_text = st.text_area(
+                "Masukkan Teks / Payload Target di Sini:",
+                height=150,
+                placeholder="Contoh Base64: aHR0cHM6Ly9tYWxpY2lvdXMuc2l0ZQ==\nContoh Hex: 48656c6c6f",
+                key="area_encode_input"
+            ).strip()
 
     if input_text:
         hasil = ""
@@ -687,7 +710,6 @@ with modul_encode:
         else:
             st.code(hasil, language="text")
             st.success("✅ Proses konversi berhasil diselesaikan!")
-
 # ==============================================================================
 # MODUL 7: EXIF METADATA INSPECTOR & SANITIZER
 # ==============================================================================
