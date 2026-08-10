@@ -811,8 +811,11 @@ with modul_network:
     import socket
     import urllib.request
     import json
+    import time
     from concurrent.futures import ThreadPoolExecutor
     import pandas as pd
+
+    use_sample_net = st.checkbox("Gunakan Sample Network Simulasi (Offline Mode)", key="chk_sample_net")
 
     # --- FUNGSI DENGAN MULTI-API FALLBACK ---
     def dapatkan_info_jaringan():
@@ -824,7 +827,7 @@ with modul_network:
             s.connect(("8.8.8.8", 80))
             local_ip = s.getsockname()[0]
             s.close()
-        except:
+        except Exception:
             pass
 
         # 2. Ambil IP Publik & ISP (Otomatis berpindah API jika salah satu limit)
@@ -835,21 +838,23 @@ with modul_network:
                 data = json.loads(response.read().decode())
                 pub_ip = data.get("query", "Tidak diketahui")
                 isp_name = data.get("isp", data.get("org", "Tidak diketahui"))
-        except:
+        except Exception:
             try:
                 # Cadangan: ipify.org
                 with urllib.request.urlopen("https://api.ipify.org?format=json", timeout=4) as resp:
                     pub_ip = json.loads(resp.read().decode()).get("ip", "Tidak diketahui")
                     isp_name = "Terhubung Internet"
-            except:
+            except Exception:
                 pass
 
         return pub_ip, isp_name, local_ip
 
-    # Tampilkan Informasi IP & ISP
-    pub_ip, isp_name, local_ip = dapatkan_info_jaringan()
+    if use_sample_net:
+        pub_ip, isp_name, local_ip = "103.144.12.1", "Telkom Indonesia (Indihome)", "192.168.1.105"
+    else:
+        pub_ip, isp_name, local_ip = dapatkan_info_jaringan()
 
-    # Ekstraksi otomatis prefix subnet lokal (misal: "10.16.15.41" -> "10.16.15.")
+    # Ekstraksi otomatis prefix subnet lokal
     default_prefix = ".".join(local_ip.split(".")[:-1]) + "." if "." in local_ip else "192.168.1."
 
     st.markdown("##### ℹ️ Informasi Koneksi Wi-Fi / Internet Anda")
@@ -866,8 +871,8 @@ with modul_network:
     col_net1, col_net2 = st.columns([1, 1])
 
     with col_net1:
-        subnet_prefix = st.text_input("Subnet IP Target (Prefix):", value=default_prefix, help="Otomatis terisi berdasarkan IP lokal Anda.")
-        range_ip = st.slider("Rentang IP (Host Range):", 1, 254, (1, 100))
+        subnet_prefix = st.text_input("Subnet IP Target (Prefix):", value=default_prefix, help="Otomatis terisi berdasarkan IP lokal Anda.", key="input_subnet_prefix")
+        range_ip = st.slider("Rentang IP (Host Range):", 1, 254, (1, 100), key="slider_range_ip")
 
     with col_net2:
         ports_to_scan = st.multiselect(
@@ -884,7 +889,8 @@ with modul_network:
                 9100: "9100 (RAW Printer Wi-Fi)",
                 554: "554 (RTSP - IP Camera / CCTV)",
                 445: "445 (SMB - Windows Share / NAS)"
-            }.get(x, str(x))
+            }.get(x, str(x)),
+            key="multi_ports_scan"
         )
 
     def ping_host_port(target):
@@ -896,46 +902,69 @@ with modul_network:
             sock.close()
             if result == 0:
                 return (ip, port)
-        except:
+        except Exception:
             pass
         return None
 
-    if st.button("🚀 Mulai Pemindaian Jaringan", type="primary"):
+    if st.button("🚀 Mulai Pemindaian Jaringan", type="primary", key="btn_scan_net"):
         if not ports_to_scan:
             st.warning("⚠️ Pilih minimal satu port untuk dipindai.")
         else:
             ip_targets = [f"{subnet_prefix}{i}" for i in range(range_ip[0], range_ip[1] + 1)]
             scan_list = [(ip, port) for ip in ip_targets for port in ports_to_scan]
-
             total_scans = len(scan_list)
+
             st.write(f"🔍 Memindai **{len(ip_targets)} IP** pada **{len(ports_to_scan)} port** (Total {total_scans} cek)...")
-            
             progress_bar = st.progress(0)
             found_devices = []
 
-            with ThreadPoolExecutor(max_workers=100) as executor:
-                for idx, res in enumerate(executor.map(ping_host_port, scan_list)):
-                    progress_bar.progress((idx + 1) / total_scans)
-                    if res:
-                        ip_found, port_found = res
-                        estimasi = {
-                            22: "Raspberry Pi / Linux Server / SSH",
-                            80: "Router Admin / Smart TV / Web Device",
-                            443: "Secure Web Interface",
-                            1900: "Smart TV / Chromecast / UPnP Device",
-                            5353: "Apple / mDNS / Wi-Fi Smart Home",
-                            8080: "Web Dashboard / Proxy",
-                            9100: "Printer Wi-Fi / Network Printer",
-                            554: "IP Camera / CCTV",
-                            445: "NAS / Windows Share / Printer"
-                        }.get(port_found, "Perangkat Aktif")
-                        
+            if use_sample_net:
+                # Simulasi Hasil Pemindaian (Offline Mode)
+                mock_results = [
+                    (f"{subnet_prefix}1", 80, "Router Admin / Smart TV / Web Device"),
+                    (f"{subnet_prefix}1", 443, "Secure Web Interface"),
+                    (f"{subnet_prefix}15", 22, "Raspberry Pi / Linux Server / SSH"),
+                    (f"{subnet_prefix}25", 554, "IP Camera / CCTV"),
+                    (f"{subnet_prefix}50", 1900, "Smart TV / Chromecast / UPnP Device"),
+                    (f"{subnet_prefix}88", 8080, "Web Dashboard / Proxy")
+                ]
+
+                for idx in range(100):
+                    time.sleep(0.01)
+                    progress_bar.progress((idx + 1) / 100)
+
+                for ip_found, port_found, estimasi in mock_results:
+                    if port_found in ports_to_scan:
                         found_devices.append({
                             "Alamat IP": ip_found,
                             "Port Terbuka": port_found,
                             "Estimasi Jenis Perangkat": estimasi,
                             "Akses Web": f"http://{ip_found}:{port_found}" if port_found in [80, 8080] else "N/A"
                         })
+            else:
+                with ThreadPoolExecutor(max_workers=100) as executor:
+                    for idx, res in enumerate(executor.map(ping_host_port, scan_list)):
+                        progress_bar.progress((idx + 1) / total_scans)
+                        if res:
+                            ip_found, port_found = res
+                            estimasi = {
+                                22: "Raspberry Pi / Linux Server / SSH",
+                                80: "Router Admin / Smart TV / Web Device",
+                                443: "Secure Web Interface",
+                                1900: "Smart TV / Chromecast / UPnP Device",
+                                5353: "Apple / mDNS / Wi-Fi Smart Home",
+                                8080: "Web Dashboard / Proxy",
+                                9100: "Printer Wi-Fi / Network Printer",
+                                554: "IP Camera / CCTV",
+                                445: "NAS / Windows Share / Printer"
+                            }.get(port_found, "Perangkat Aktif")
+
+                            found_devices.append({
+                                "Alamat IP": ip_found,
+                                "Port Terbuka": port_found,
+                                "Estimasi Jenis Perangkat": estimasi,
+                                "Akses Web": f"http://{ip_found}:{port_found}" if port_found in [80, 8080] else "N/A"
+                            })
 
             progress_bar.empty()
 
