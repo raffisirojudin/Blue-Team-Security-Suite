@@ -652,33 +652,76 @@ with modul_exif:
 # ==============================================================================
 with modul_network:
     st.markdown("### 📡 Network Auto-Discovery & Port Sweeper")
-    st.write("Temukan alamat IP perangkat lokal (Raspberry Pi, Printer, Smart TV, IP Cam) tanpa perlu masuk ke admin router.")
-
-    st.info("💡 **Catatan Operasional:** Untuk memindai Wi-Fi/LAN rumah atau kantor Anda (seperti range `192.168.x.x`), jalankan Streamlit ini secara lokal di PC/laptop Anda (`streamlit run app.py`).")
+    st.write("Temukan IP publik ISP, IP router Wi-Fi, dan perangkat lokal tanpa perlu masuk ke admin router.")
 
     import socket
+    import urllib.request
+    import json
     from concurrent.futures import ThreadPoolExecutor
     import pandas as pd
+
+    # Fungsi untuk mengecek IP Publik (ISP) & IP Lokal secara otomatis
+    def dapatkan_info_jaringan():
+        pub_ip, isp_name, local_ip = "Tidak diketahui", "Tidak diketahui", "127.0.0.1"
+        try:
+            # Mengambil IP Publik & Nama ISP
+            req = urllib.request.Request("https://ipapi.co/json/", headers={'User-Agent': 'Mozilla/5.0'})
+            with urllib.request.urlopen(req, timeout=3) as response:
+                data = json.loads(response.read().decode())
+                pub_ip = data.get("ip", "Gagal membaca")
+                isp_name = data.get("org", "Gagal membaca")
+        except:
+            pass
+
+        try:
+            # Mengambil IP Lokal Perangkat
+            s = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+            s.connect(("8.8.8.8", 80))
+            local_ip = s.getsockname()[0]
+            s.close()
+        except:
+            pass
+
+        return pub_ip, isp_name, local_ip
+
+    # Tampilkan Informasi IP & ISP
+    pub_ip, isp_name, local_ip = dapatkan_info_jaringan()
+
+    # Ekstraksi otomatis prefix subnet lokal (misal: "192.168.1.15" -> "192.168.1.")
+    default_prefix = ".".join(local_ip.split(".")[:-1]) + "." if "." in local_ip else "192.168.1."
+
+    st.markdown("##### ℹ️ Informasi Koneksi Wi-Fi / Internet Anda")
+    col_info1, col_info2, col_info3 = st.columns(3)
+    with col_info1:
+        st.metric("🌐 IP Publik (Dari ISP)", pub_ip)
+    with col_info2:
+        st.metric("🏢 Penyedia ISP", isp_name)
+    with col_info3:
+        st.metric("💻 IP Lokal Perangkat Ini", local_ip)
+
+    st.divider()
 
     col_net1, col_net2 = st.columns([1, 1])
 
     with col_net1:
-        subnet_prefix = st.text_input("Subnet IP Target (Prefix):", value="192.168.1.", help="Contoh: 192.168.1. atau 192.168.0.")
+        subnet_prefix = st.text_input("Subnet IP Target (Prefix):", value=default_prefix, help="Otomatis terisi berdasarkan IP lokal Anda.")
         range_ip = st.slider("Rentang IP (Host Range):", 1, 254, (1, 100))
 
     with col_net2:
         ports_to_scan = st.multiselect(
             "Port yang Dipindai:",
-            options=[22, 80, 443, 8080, 9100, 554, 445],
+            options=[22, 80, 443, 1900, 5353, 8080, 9100, 554, 445],
             default=[22, 80, 443, 8080],
             format_func=lambda x: {
                 22: "22 (SSH - Raspberry Pi / Linux)",
-                80: "80 (HTTP - Web UI / Router / Smart TV)",
+                80: "80 (HTTP - Router / Smart TV / Printer)",
                 443: "443 (HTTPS - Web Secure)",
+                1900: "1900 (UPnP - Smart TV / Chromecast)",
+                5353: "5353 (mDNS - AirPlay / Apple / Wi-Fi Device)",
                 8080: "8080 (Web UI Alternatif)",
-                9100: "9100 (RAW Printer)",
-                554: "554 (RTSP - IP Camera)",
-                445: "445 (SMB - File Sharing / Windows)"
+                9100: "9100 (RAW Printer Wi-Fi)",
+                554: "554 (RTSP - IP Camera / CCTV)",
+                445: "445 (SMB - Windows Share / NAS)"
             }.get(x, str(x))
         )
 
@@ -717,6 +760,8 @@ with modul_network:
                             22: "Raspberry Pi / Linux Server / SSH",
                             80: "Router Admin / Smart TV / Web Device",
                             443: "Secure Web Interface",
+                            1900: "Smart TV / Chromecast / UPnP Device",
+                            5353: "Apple / mDNS / Wi-Fi Smart Home",
                             8080: "Web Dashboard / Proxy",
                             9100: "Printer Wi-Fi / Network Printer",
                             554: "IP Camera / CCTV",
