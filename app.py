@@ -717,30 +717,57 @@ with modul_exif:
     st.markdown("### 🖼️ EXIF Metadata Inspector & Sanitizer")
     st.write("Deteksi lokasi GPS tersembunyi, informasi perangkat, dan bersihkan metadata foto demi menjaga privasi.")
 
-    from PIL import Image
+    from PIL import Image, ImageDraw
     from PIL.ExifTags import TAGS
     import io
 
+    use_sample_exif = st.checkbox("Gunakan Sample Foto Simulasi (Dengan Metadata EXIF & GPS)", key="chk_sample_exif")
     uploaded_img = st.file_uploader("Unggah Foto (JPG / JPEG / PNG):", type=["jpg", "jpeg", "png"], key="uploader_exif")
 
-    if uploaded_img:
+    image = None
+    image_name = ""
+    parsed_exif = {}
+    has_exif = False
+
+    if uploaded_img is not None:
         image = Image.open(uploaded_img)
+        image_name = uploaded_img.name
         
+        exif_data = image._getexif() if hasattr(image, '_getexif') else None
+        if exif_data:
+            has_exif = True
+            for tag_id, value in exif_data.items():
+                tag_name = TAGS.get(tag_id, tag_id)
+                parsed_exif[tag_name] = value
+
+    elif use_sample_exif:
+        # Generasi foto sampel menggunakan PIL
+        image = Image.new('RGB', (600, 400), color='#1e293b')
+        draw = ImageDraw.Draw(image)
+        draw.rectangle([20, 20, 580, 380], outline="#38bdf8", width=3)
+        draw.text((180, 190), "SAMPLE EXIF PHOTO (GPS INSIDE)", fill="#f8fafc")
+        
+        image_name = "sample_photo_with_gps.jpg"
+        has_exif = True
+        
+        # Mock metadata EXIF simulasi
+        parsed_exif = {
+            "Make": "Apple",
+            "Model": "iPhone 15 Pro Max",
+            "DateTimeOriginal": "2026:08:10 17:45:12",
+            "Software": "iOS 18.2",
+            "GPSInfo": {1: 'N', 2: ((6, 1), (10, 1), (0, 1)), 3: 'E', 4: ((106, 1), (49, 1), (0, 1))}
+        }
+
+    if image is not None:
         col_img1, col_img2 = st.columns([1, 1])
         with col_img1:
-            st.image(image, caption="Foto Target", use_container_width=True)
+            st.image(image, caption=f"Foto Target: {image_name}", use_container_width=True)
 
         with col_img2:
             st.subheader("🔍 Metadata Terdeteksi")
             
-            exif_data = image._getexif() if hasattr(image, '_getexif') else None
-            parsed_exif = {}
-
-            if exif_data:
-                for tag_id, value in exif_data.items():
-                    tag_name = TAGS.get(tag_id, tag_id)
-                    parsed_exif[tag_name] = value
-
+            if has_exif and parsed_exif:
                 # Tampilkan Informasi Kunci
                 st.write(f"**Merek Perangkat:** `{parsed_exif.get('Make') or 'Tidak ada'}`")
                 st.write(f"**Model Perangkat:** `{parsed_exif.get('Model') or 'Tidak ada'}`")
@@ -761,12 +788,19 @@ with modul_exif:
         # Proses Pembersihan Metadata & Konversi Mode Gambar
         clean_image = image.convert("RGB")
 
-        # Simpan ke buffer memori untuk diunduh
+        # Simpan ke buffer memori untuk diunduh (bersih dari EXIF)
         buf = io.BytesIO()
         clean_image.save(buf, format="JPEG")
         byte_im = buf.getvalue()
 
-        st.download_button(label="⬇️ Unduh Foto Steril (Tanpa Metadata)", data=byte_im, file_name=f"steril_{uploaded_img.name}", mime="image/jpeg", type="primary")
+        st.download_button(
+            label="⬇️ Unduh Foto Steril (Tanpa Metadata)",
+            data=byte_im,
+            file_name=f"steril_{image_name}",
+            mime="image/jpeg",
+            type="primary",
+            key="btn_download_steril"
+        )
 # ==============================================================================
 # MODUL 8: NETWORK AUTO-DISCOVERY & PORT SWEEPER
 # ==============================================================================
