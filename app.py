@@ -20,7 +20,7 @@ st.title("🛡️ Blue Team Security Suite")
 st.caption("Platform analisis keamanan defensif terpadu untuk pengujian Email Phishing, Audit Web/SSL, Integritas Hash, dan Rekod DNS.")
 
 # Navigasi Modul Utama (Top Tabs)
-modul_email, modul_web, modul_hash, modul_dns, modul_pwd, modul_encode, modul_exif, modul_network = st.tabs([
+modul_email, modul_web, modul_hash, modul_dns, modul_pwd, modul_encode, modul_exif, modul_network, modul_threat, modul_log = st.tabs([
     "📧 Modul 1: Email Header & Phishing Analyzer", 
     "🌐 Modul 2: Website Security Headers & SSL Auditor",
     "🔑 Modul 3: File Hash & Integrity Checker",
@@ -28,7 +28,9 @@ modul_email, modul_web, modul_hash, modul_dns, modul_pwd, modul_encode, modul_ex
     "🔐 Modul 5: Password Entropy Evaluator",
     "🔤 Modul 6: SOC Text & Payload Encoder / Decoder",
     "🖼️ Modul 7: EXIF Metadata Inspector & Sanitizer",
-    "📡 Modul 8: Network Auto-Discovery & Port Sweeper"
+    "📡 Modul 8: Network Auto-Discovery & Port Sweeper",
+    "🗺️ Modul 9: IP Threat Intelligence & Geolocation",
+    "🛡️ Modul 10: Web Log Security Parser & Threat Hunter"
 ])
 
 # ==============================================================================
@@ -791,3 +793,161 @@ with modul_network:
                 st.dataframe(df_res, use_container_width=True)
             else:
                 st.warning("❌ Tidak ada perangkat aktif yang merespons pada subnet dan port yang dipilih.")
+
+# ==============================================================================
+# MODUL 9: IP THREAT INTELLIGENCE & GEOLOCATION MAPPER
+# ==============================================================================
+with modul_threat:
+    st.markdown("### 🗺️ IP Threat Intelligence & Geolocation Mapper")
+    st.write("Investigasi lokasi fisik IP mencurigakan, ISP/ASN penanggung jawab, serta deteksi penggunaan Proxy/VPN.")
+
+    import urllib.request
+    import json
+    import pandas as pd
+
+    target_ip = st.text_input("Masukkan Alamat IP Target (IPv4 / IPv6):", value="8.8.8.8", help="Masukkan IP publik yang ingin diinvestigasi.")
+
+    if st.button("🔍 Investigasi IP", type="primary"):
+        if not target_ip.strip():
+            st.warning("⚠️ Masukkan alamat IP yang valid.")
+        else:
+            try:
+                # Mengambil data intelijen IP dari API
+                url = f"http://ip-api.com/json/{target_ip.strip()}?fields=status,message,country,countryCode,regionName,city,zip,lat,lon,timezone,isp,org,as,query,proxy,hosting"
+                req = urllib.request.Request(url, headers={'User-Agent': 'Mozilla/5.0'})
+                
+                with urllib.request.urlopen(req, timeout=5) as resp:
+                    data = json.loads(resp.read().decode())
+
+                if data.get("status") == "fail":
+                    st.error(f"❌ Gagal memproses IP: {data.get('message', 'IP tidak valid/publik')}")
+                else:
+                    col_t1, col_t2, col_t3, col_t4 = st.columns(4)
+                    with col_t1:
+                        st.metric("🏳️ Negara", f"{data.get('country')} ({data.get('countryCode')})")
+                    with col_t2:
+                        st.metric("🏙️ Kota", data.get('city', 'N/A'))
+                    with col_t3:
+                        st.metric("🏢 Penyedia ISP", data.get('isp', 'N/A'))
+                    with col_t4:
+                        st.metric("🌐 ASN / Org", data.get('as', 'N/A').split()[0])
+
+                    st.divider()
+
+                    # Menampilkan Peta Interaktif
+                    lat = data.get("lat")
+                    lon = data.get("lon")
+                    if lat and lon:
+                        st.markdown("##### 📍 Peta Lokasi Server IP")
+                        map_data = pd.DataFrame({'lat': [lat], 'lon': [lon]})
+                        st.map(map_data, zoom=10)
+
+                    # Indikator Risiko / Threat Check
+                    st.markdown("##### ⚠️ Indikator Potensi Risiko")
+                    is_proxy = data.get("proxy", False)
+                    is_hosting = data.get("hosting", False)
+
+                    col_r1, col_r2 = st.columns(2)
+                    with col_r1:
+                        if is_proxy:
+                            st.error("🚫 **Proxy / VPN / TOR Detected:** IP ini teridentifikasi sebagai node perantara.")
+                        else:
+                            st.success("✅ **Bukan Proxy / VPN:** Alamat IP tercatat sebagai IP perumahan/koneksi standar.")
+                    
+                    with col_r2:
+                        if is_hosting:
+                            st.warning("⚠️ **Data Center / Hosting:** IP ini berasal dari server cloud/hosting, bukan perangkat seluler/rumah pengguna.")
+                        else:
+                            st.info("ℹ️ **Residential / ISP:** IP ini dialokasikan untuk pengguna akhir (End-User).")
+
+            except Exception as e:
+                st.error(f"❌ Terjadi kesalahan saat menghubungkan ke server intelijen: {e}")
+
+# ==============================================================================
+# MODUL 10: WEB LOG SECURITY PARSER & THREAT HUNTER
+# ==============================================================================
+with modul_log:
+    st.markdown("### 🛡️ Web Log Security Parser & Threat Hunter")
+    st.write("Unggah file log akses web (Nginx / Apache) untuk mendeteksi serangan SQL Injection, XSS, Path Traversal, dan Brute Force secara otomatis.")
+
+    import re
+    import pandas as pd
+
+    uploaded_log = st.file_uploader("Unggah File Log (.log / .txt):", type=["log", "txt"])
+    sample_log_button = st.checkbox("Gunakan Sample Log Simulasi Serangan")
+
+    log_content = ""
+    if uploaded_log is not None:
+        log_content = uploaded_log.getvalue().decode("utf-8", errors="ignore")
+    elif sample_log_button:
+        log_content = """192.168.1.50 - - [10/Aug/2026:10:00:01 +0000] "GET /index.php HTTP/1.1" 200 1450
+10.0.0.12 - - [10/Aug/2026:10:01:15 +0000] "GET /admin/login.php?user=admin' OR 1=1-- HTTP/1.1" 200 4200
+172.16.0.4 - - [10/Aug/2026:10:02:30 +0000] "GET /search?q=<script>alert('XSS')</script> HTTP/1.1" 200 2300
+192.168.1.100 - - [10/Aug/2026:10:03:00 +0000] "GET /download.php?file=../../../../etc/passwd HTTP/1.1" 403 230
+10.0.0.12 - - [10/Aug/2026:10:04:12 +0000] "POST /login.php HTTP/1.1" 401 512
+10.0.0.12 - - [10/Aug/2026:10:04:13 +0000] "POST /login.php HTTP/1.1" 401 512
+10.0.0.12 - - [10/Aug/2026:10:04:14 +0000] "POST /login.php HTTP/1.1" 401 512
+45.33.32.156 - - [10/Aug/2026:10:05:22 +0000] "GET /shell.php;id;whoami HTTP/1.1" 404 180"""
+
+    if log_content:
+        lines = log_content.strip().split("\n")
+        st.info(f"📊 Memproses total **{len(lines)}** baris log...")
+
+        # Pattern Regex Log Standar Apache/Nginx
+        log_pattern = re.compile(
+            r'(?P<ip>[\d\.]+) - - \[(?P<time>.*?)\] "(?P<method>\w+) (?P<url>\S+) (?P<proto>\S+)" (?P<status>\d+) (?P<bytes>\d+|-)'
+        )
+
+        parsed_logs = []
+        threats_found = []
+
+        # Kamus Deteksi Payload Serangan
+        attack_signatures = {
+            "SQL Injection (SQLi)": r"(?i)(SELECT|UNION|INSERT|DELETE|OR\s+1=1|'|--|INFORMATION_SCHEMA)",
+            "Cross-Site Scripting (XSS)": r"(?i)(<script>|javascript:|onload=|alert\(|<img)",
+            "Path Traversal (LFI/RFI)": r"(?i)(\.\./|\.\.\\|/etc/passwd|boot\.ini)",
+            "Command Injection": r"(?i)(;|&&|\|\||cmd\.exe|/bin/bash|whoami|id\b)"
+        }
+
+        for line in lines:
+            match = log_pattern.match(line)
+            if match:
+                data = match.groupdict()
+                parsed_logs.append(data)
+                
+                # Cek Payload Serangan
+                url_requested = data["url"]
+                detected_types = []
+                for attack_name, pattern in attack_signatures.items():
+                    if re.search(pattern, url_requested):
+                        detected_types.append(attack_name)
+                
+                if detected_types:
+                    data_threat = data.copy()
+                    data_threat["Kategori Serangan"] = ", ".join(detected_types)
+                    threats_found.append(data_threat)
+
+        df_logs = pd.DataFrame(parsed_logs)
+        df_threats = pd.DataFrame(threats_found)
+
+        col_l1, col_l2, col_l3 = st.columns(3)
+        with col_l1:
+            st.metric("📥 Total Request", len(parsed_logs))
+        with col_l2:
+            st.metric("⚠️ Ancaman Terdeteksi", len(threats_found))
+        with col_l3:
+            top_ip = df_logs["ip"].mode()[0] if not df_logs.empty else "N/A"
+            st.metric("🔥 IP Teraktif", top_ip)
+
+        st.divider()
+
+        if not df_threats.empty:
+            st.error(f"🚨 **Ditemukan {len(df_threats)} Aktivitas Mencurigakan / Serangan Web!**")
+            st.dataframe(df_threats[["ip", "time", "method", "url", "status", "Kategori Serangan"]], use_container_width=True)
+        else:
+            st.success("✅ Tidak terdeteksi indikasi serangan web populer pada file log ini.")
+
+        if not df_logs.empty:
+            st.markdown("##### 📈 Distribusi HTTP Status Code")
+            status_counts = df_logs["status"].value_counts()
+            st.bar_chart(status_counts)
