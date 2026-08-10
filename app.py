@@ -49,7 +49,7 @@ with modul_email:
         uploaded_eml = st.file_uploader("Unggah file email (.eml):", type=['eml'], key="uploader_eml")
         if uploaded_eml:
             raw_email_obj = BytesParser(policy=policy.default).parse(uploaded_eml)
-   else:
+        else:
         # Fitur Checkbox Sample Data Simulasi
         use_sample_email = st.checkbox("Gunakan Sample Header Email Phishing Simulasi", key="chk_sample_email")
         
