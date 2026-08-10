@@ -986,20 +986,49 @@ with modul_threat:
     import json
     import pandas as pd
 
-    target_ip = st.text_input("Masukkan Alamat IP Target (IPv4 / IPv6):", value="8.8.8.8", help="Masukkan IP publik yang ingin diinvestigasi.")
+    use_sample_threat = st.checkbox("Gunakan Sample Target IP Simulasi (Offline Mode)", key="chk_sample_threat")
 
-    if st.button("🔍 Investigasi IP", type="primary"):
+    if use_sample_threat:
+        target_ip = st.text_input("Masukkan Alamat IP Target (IPv4 / IPv6):", value="185.220.101.5", help="Masukkan IP publik yang ingin diinvestigasi.", key="input_target_ip_sample")
+    else:
+        target_ip = st.text_input("Masukkan Alamat IP Target (IPv4 / IPv6):", value="8.8.8.8", help="Masukkan IP publik yang ingin diinvestigasi.", key="input_target_ip")
+
+    if st.button("🔍 Investigasi IP", type="primary", key="btn_threat_investigate"):
         if not target_ip.strip():
             st.warning("⚠️ Masukkan alamat IP yang valid.")
         else:
-            try:
-                # Mengambil data intelijen IP dari API
-                url = f"http://ip-api.com/json/{target_ip.strip()}?fields=status,message,country,countryCode,regionName,city,zip,lat,lon,timezone,isp,org,as,query,proxy,hosting"
-                req = urllib.request.Request(url, headers={'User-Agent': 'Mozilla/5.0'})
-                
-                with urllib.request.urlopen(req, timeout=5) as resp:
-                    data = json.loads(resp.read().decode())
+            data = None
+            if use_sample_threat:
+                # Data Simulasi Intelijen IP (Offline Mode - TOR Exit Node Example)
+                data = {
+                    "status": "success",
+                    "country": "Germany",
+                    "countryCode": "DE",
+                    "regionName": "Hesse",
+                    "city": "Frankfurt am Main",
+                    "zip": "60313",
+                    "lat": 50.1109,
+                    "lon": 8.6821,
+                    "timezone": "Europe/Berlin",
+                    "isp": "Tor Exit Node Network",
+                    "org": "Privacy Foundation",
+                    "as": "AS205100 Tor Services",
+                    "query": target_ip.strip(),
+                    "proxy": True,
+                    "hosting": True
+                }
+            else:
+                try:
+                    # Mengambil data intelijen IP dari API
+                    url = f"http://ip-api.com/json/{target_ip.strip()}?fields=status,message,country,countryCode,regionName,city,zip,lat,lon,timezone,isp,org,as,query,proxy,hosting"
+                    req = urllib.request.Request(url, headers={'User-Agent': 'Mozilla/5.0'})
+                    
+                    with urllib.request.urlopen(req, timeout=5) as resp:
+                        data = json.loads(resp.read().decode())
+                except Exception as e:
+                    st.error(f"❌ Terjadi kesalahan saat menghubungkan ke server intelijen: {e}")
 
+            if data:
                 if data.get("status") == "fail":
                     st.error(f"❌ Gagal memproses IP: {data.get('message', 'IP tidak valid/publik')}")
                 else:
@@ -1011,7 +1040,7 @@ with modul_threat:
                     with col_t3:
                         st.metric("🏢 Penyedia ISP", data.get('isp', 'N/A'))
                     with col_t4:
-                        st.metric("🌐 ASN / Org", data.get('as', 'N/A').split()[0])
+                        st.metric("🌐 ASN / Org", data.get('as', 'N/A').split()[0] if data.get('as') else 'N/A')
 
                     st.divider()
 
@@ -1040,9 +1069,6 @@ with modul_threat:
                             st.warning("⚠️ **Data Center / Hosting:** IP ini berasal dari server cloud/hosting, bukan perangkat seluler/rumah pengguna.")
                         else:
                             st.info("ℹ️ **Residential / ISP:** IP ini dialokasikan untuk pengguna akhir (End-User).")
-
-            except Exception as e:
-                st.error(f"❌ Terjadi kesalahan saat menghubungkan ke server intelijen: {e}")
 
 # ==============================================================================
 # MODUL 10: WEB LOG SECURITY PARSER & THREAT HUNTER
