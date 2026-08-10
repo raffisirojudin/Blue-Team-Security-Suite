@@ -1075,21 +1075,22 @@ with modul_threat:
 # ==============================================================================
 with modul_log:
     st.markdown("### 🛡️ Web Log Security Parser & Threat Hunter")
-    st.write("Unggah file log akses web (Nginx / Apache) untuk mendeteksi serangan SQL Injection, XSS, Path Traversal, dan Brute Force secara otomatis.")
+    st.write("Unggah file log akses web (Nginx / Apache) untuk mendeteksi serangan SQL Injection, XSS, Path Traversal, dan Command Injection secara otomatis.")
 
     import re
+    import urllib.parse
     import pandas as pd
 
-    uploaded_log = st.file_uploader("Unggah File Log (.log / .txt):", type=["log", "txt"])
-    sample_log_button = st.checkbox("Gunakan Sample Log Simulasi Serangan")
+    use_sample_log = st.checkbox("Gunakan Sample Log Simulasi Serangan", key="chk_sample_log")
+    uploaded_log = st.file_uploader("Unggah File Log (.log / .txt):", type=["log", "txt"], key="uploader_log_sec")
 
     log_content = ""
     if uploaded_log is not None:
         log_content = uploaded_log.getvalue().decode("utf-8", errors="ignore")
-    elif sample_log_button:
+    elif use_sample_log:
         log_content = """192.168.1.50 - - [10/Aug/2026:10:00:01 +0000] "GET /index.php HTTP/1.1" 200 1450
-10.0.0.12 - - [10/Aug/2026:10:01:15 +0000] "GET /admin/login.php?user=admin' OR 1=1-- HTTP/1.1" 200 4200
-172.16.0.4 - - [10/Aug/2026:10:02:30 +0000] "GET /search?q=<script>alert('XSS')</script> HTTP/1.1" 200 2300
+10.0.0.12 - - [10/Aug/2026:10:01:15 +0000] "GET /admin/login.php?user=admin%27%20OR%201=1-- HTTP/1.1" 200 4200
+172.16.0.4 - - [10/Aug/2026:10:02:30 +0000] "GET /search?q=%3Cscript%3Ealert(%27XSS%27)%3C/script%3E HTTP/1.1" 200 2300
 192.168.1.100 - - [10/Aug/2026:10:03:00 +0000] "GET /download.php?file=../../../../etc/passwd HTTP/1.1" 403 230
 10.0.0.12 - - [10/Aug/2026:10:04:12 +0000] "POST /login.php HTTP/1.1" 401 512
 10.0.0.12 - - [10/Aug/2026:10:04:13 +0000] "POST /login.php HTTP/1.1" 401 512
@@ -1097,7 +1098,7 @@ with modul_log:
 45.33.32.156 - - [10/Aug/2026:10:05:22 +0000] "GET /shell.php;id;whoami HTTP/1.1" 404 180"""
 
     if log_content:
-        lines = log_content.strip().split("\n")
+        lines = [line.strip() for line in log_content.strip().split("\n") if line.strip()]
         st.info(f"📊 Memproses total **{len(lines)}** baris log...")
 
         # Pattern Regex Log Standar Apache/Nginx
@@ -1122,16 +1123,18 @@ with modul_log:
                 data = match.groupdict()
                 parsed_logs.append(data)
                 
-                # Cek Payload Serangan
-                url_requested = data["url"]
+                # Dekode Karakter URL-Encoded (%27 -> ', %3C -> <, dst.)
+                decoded_url = urllib.parse.unquote(data["url"])
                 detected_types = []
+
                 for attack_name, pattern in attack_signatures.items():
-                    if re.search(pattern, url_requested):
+                    if re.search(pattern, decoded_url):
                         detected_types.append(attack_name)
                 
                 if detected_types:
                     data_threat = data.copy()
                     data_threat["Kategori Serangan"] = ", ".join(detected_types)
+                    data_threat["URL Decode"] = decoded_url
                     threats_found.append(data_threat)
 
         df_logs = pd.DataFrame(parsed_logs)
@@ -1139,22 +1142,25 @@ with modul_log:
 
         col_l1, col_l2, col_l3 = st.columns(3)
         with col_l1:
-            st.metric("📥 Total Request", len(parsed_logs))
+            st.metric("📥 Total Request Parsed", len(parsed_logs))
         with col_l2:
             st.metric("⚠️ Ancaman Terdeteksi", len(threats_found))
         with col_l3:
-            top_ip = df_logs["ip"].mode()[0] if not df_logs.empty else "N/A"
+            top_ip = df_logs["ip"].mode()[0] if not df_logs.empty and "ip" in df_logs else "N/A"
             st.metric("🔥 IP Teraktif", top_ip)
 
         st.divider()
 
         if not df_threats.empty:
             st.error(f"🚨 **Ditemukan {len(df_threats)} Aktivitas Mencurigakan / Serangan Web!**")
-            st.dataframe(df_threats[["ip", "time", "method", "url", "status", "Kategori Serangan"]], use_container_width=True)
+            st.dataframe(
+                df_threats[["ip", "time", "method", "url", "status", "Kategori Serangan"]],
+                use_container_width=True
+            )
         else:
             st.success("✅ Tidak terdeteksi indikasi serangan web populer pada file log ini.")
 
-        if not df_logs.empty:
+        if not df_logs.empty and "status" in df_logs:
             st.markdown("##### 📈 Distribusi HTTP Status Code")
             status_counts = df_logs["status"].value_counts()
             st.bar_chart(status_counts)
