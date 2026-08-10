@@ -49,11 +49,41 @@ with modul_email:
         uploaded_eml = st.file_uploader("Unggah file email (.eml):", type=['eml'], key="uploader_eml")
         if uploaded_eml:
             raw_email_obj = BytesParser(policy=policy.default).parse(uploaded_eml)
-    else:
-        header_text = st.text_area("Tempelkan Raw Header / Teks Email di sini:", height=180, key="area_eml_text")
+   else:
+        # Fitur Checkbox Sample Data Simulasi
+        use_sample_email = st.checkbox("Gunakan Sample Header Email Phishing Simulasi", key="chk_sample_email")
+        
+        import textwrap
+        sample_header_text = textwrap.dedent("""\
+            Received: from mail.suspicious-bank-update.com (mail.suspicious-bank-update.com [185.220.101.5])
+                by mx.google.com with ESMTPS id x123456789
+                for <victim@company.com>; Mon, 10 Aug 2026 10:15:30 -0700
+            Authentication-Results: mx.google.com;
+                spf=softfail (google.com: domain of transition may not designate 185.220.101.5 as permitted sender) smtp.mailfrom=admin@suspicious-bank-update.com;
+                dkim=fail header.i=@suspicious-bank-update.com;
+                dmarc=fail (p=REJECT) action=none header.from=suspicious-bank-update.com;
+            From: "Bank Security Alert" <admin@suspicious-bank-update.com>
+            To: victim@company.com
+            Reply-To: attacker-box@phishing-server.ru
+            Subject: URGENT: Akun Anda Dibekukan! Segera Verifikasi Data Anda
+            Date: Mon, 10 Aug 2026 10:15:00 -0700
+            Content-Type: text/html; charset="UTF-8"
+
+            <html>
+            <body>
+            <p>Silakan amankan akun Anda melalui tautan resmi kami:</p>
+            <a href="http://185.220.101.5/login-phishing">https://bankresmi.co.id/login</a>
+            </body>
+            </html>
+        """)
+
+        if use_sample_email:
+            header_text = st.text_area("Tempelkan Raw Header / Teks Email di sini:", value=sample_header_text, height=220, key="area_eml_text_sample")
+        else:
+            header_text = st.text_area("Tempelkan Raw Header / Teks Email di sini:", height=180, key="area_eml_text")
+
         if header_text.strip():
             raw_email_obj = Parser(policy=policy.default).parsestr(header_text)
-
     def ekstrak_url_dari_text(text):
         url_pattern = r'https?://[^\s<>"]+|www\.[^\s<>"]+'
         return re.findall(url_pattern, text)
