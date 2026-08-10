@@ -40,6 +40,8 @@ with modul_email:
     st.markdown("### 📧 Email Header & Phishing Analyzer")
     st.write("Analisis file `.eml` atau *raw header* email untuk memeriksa otentikasi pengirim dan tautan berbahaya.")
 
+    import textwrap
+
     st.sidebar.header("📥 Input Email")
     mode_input = st.sidebar.radio("Pilih Cara Unggah Email:", ["File .EML", "Tempel Raw Header (Teks)"], key="mode_email_input")
 
@@ -49,11 +51,9 @@ with modul_email:
         uploaded_eml = st.file_uploader("Unggah file email (.eml):", type=['eml'], key="uploader_eml")
         if uploaded_eml:
             raw_email_obj = BytesParser(policy=policy.default).parse(uploaded_eml)
-        else:
-        # Fitur Checkbox Sample Data Simulasi
+    else:
         use_sample_email = st.checkbox("Gunakan Sample Header Email Phishing Simulasi", key="chk_sample_email")
         
-        import textwrap
         sample_header_text = textwrap.dedent("""\
             Received: from mail.suspicious-bank-update.com (mail.suspicious-bank-update.com [185.220.101.5])
                 by mx.google.com with ESMTPS id x123456789
@@ -84,6 +84,7 @@ with modul_email:
 
         if header_text.strip():
             raw_email_obj = Parser(policy=policy.default).parsestr(header_text)
+
     def ekstrak_url_dari_text(text):
         url_pattern = r'https?://[^\s<>"]+|www\.[^\s<>"]+'
         return re.findall(url_pattern, text)
@@ -200,7 +201,6 @@ with modul_email:
                         st.code(url)
                 else:
                     st.info("Tidak ditemukan tautan URL pada isi email.")
-
 
 # ==============================================================================
 # MODUL 2: WEBSITE SECURITY HEADERS & SSL AUDITOR
