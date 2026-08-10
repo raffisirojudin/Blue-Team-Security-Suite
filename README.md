@@ -5,66 +5,44 @@
 ![Type](https://img.shields.io/badge/Security-Blue%20Team%20Defensive-green.svg)
 ![License](https://img.shields.io/badge/License-MIT-yellow.svg)
 
-**Blue Team Security Suite** adalah platform analisis keamanan defensif (*Cybersecurity Defensive Platform*) terpadu berbasis web yang dibangun menggunakan **Python** dan **Streamlit**. 
+# 🛡️ All-in-One SOC & Cybersecurity Operations Dashboard
 
-Platform ini dirancang untuk membantu analis *Security Operations Center* (SOC), *SysAdmin*, maupun praktisi keamanan siber dalam mengaudit, menguji, dan menganalisis potensi ancaman keamanan digital dengan cepat dan efisien dalam satu antarmuka antarmuka yang ramah pengguna.
-
----
-
-## 🚀 Fitur Utama & Modul Keamanan
-
-Platform ini terdiri dari **6 Modul Defensif Utama**:
-
-| Modul | Nama Fitur | Deskripsi Singkat |
-| :--- | :--- | :--- |
-| **Modul 1** | 📧 Email Header & Phishing Analyzer | Analisis file `.eml` / *raw header* untuk deteksi pemalsuan pengirim & tautan *phishing*. |
-| **Modul 2** | 🌐 Website Security Headers & SSL Auditor | Audit konfigurasi *HTTP Security Headers* dan validitas sertifikat SSL/TLS domain. |
-| **Modul 3** | 🔑 File Hash & Integrity Checker | Perhitungan *cryptographic hash* (MD5, SHA-1, SHA-256) & verifikasi integritas berkas. |
-| **Modul 4** | 🔍 DNS Security Inspector | Inspeksi rekod DNS (A, MX, NS) dan validasi proteksi email domain (SPF & DMARC). |
-| **Modul 5** | 🔐 Password Entropy Evaluator | Penilaian kekuatan kata sandi berbasis *Bit Entropy* & estimasi waktu retas *brute-force*. |
-| **Modul 6** | 🔤 SOC Text & Payload Encoder / Decoder | Konversi instan *payload* terselubung (Base64, Hex, URL-encoding, HTML Entities). |
+Dashboard analisis keamanan siber interaktif berbasis **Streamlit** dan **Python**. Aplikasi ini dirancang untuk kebutuhan analisis insiden (*incident response*), investigasi jaringan, inspeksi privasi, hingga edukasi kesadaran keamanan (*security awareness*). Setiap modul dilengkapi dengan **Offline Simulation / Sample Mode** sehingga dapat diuji coba secara aman tanpa koneksi internet atau data sensitif.
 
 ---
 
-## 📖 Detail Cara Kerja, Penggunaan, & Manfaat Modul
+## 🚀 Fitur & Modul Utama
 
-### 📧 1. Email Header & Phishing Analyzer
-* **Cara Kerja:** Menganalisis metadata *Header* email untuk memvalidasi otentikasi pengirim (SPF, DKIM, DMARC), melacak rute transit server (*Hops*), serta mendeteksi *mismatch* antara teks visual tautan dan URL tujuan asli.
-* **Cara Penggunaan:** Unggah berkas `.eml` atau tempelkan teks *raw header* email. Buka tab analisis untuk melihat status validasi otentikasi dan daftar tautan tersembunyi.
-* **Manfaat:** Mencegah insiden *phishing* dan *email spoofing* sebelum pengguna mengklik tautan berbahaya.
+Dashboard ini terdiri dari **10 Modul Keamanan**:
 
-### 🌐 2. Website Security Headers & SSL Auditor
-* **Cara Kerja:** Memeriksa respons *HTTP Headers* dari domain target terhadap standar *security headers* (HSTS, CSP, X-Frame-Options, dll.), mendeteksi kebocoran versi server, dan mengevaluasi masa berlaku sertifikat SSL/TLS.
-* **Cara Penggunaan:** Masukkan URL/domain target dan klik **Audit Keamanan Web**. Platform akan memberikan penilaian *Grade* (A+ hingga F) serta menyediaka kode rekomendasi konfigurasi Nginx.
-* **Manfaat:** Membantu administrator server menutup celah keamanan web seperti *Clickjacking* dan *XSS*.
-
-### 🔑 3. File Hash & Integrity Checker
-* **Cara Kerja:** Menghitung sidik jari digital (*cryptographic hash*) dari berkas yang diunggah secara instan di memori tanpa menyimpan berkas ke server.
-* **Cara Penggunaan:** Unggah berkas apapun (PDF, EXE, ZIP, Gambar, dll.), lalu tempelkan nilai hash resmi dari vendor pada kolom pembanding untuk memverifikasi keasliannya (`✅ MATCH` / `❌ MISMATCH`).
-* **Manfaat:** Memastikan berkas yang diunduh bebas dari modifikasi atau sisipan *malware* (*file tampering*).
-
-### 🔍 4. DNS Security Inspector
-* **Cara Kerja:** Melakukan kueri DNS secara *real-time* untuk mengambil rekod jaringan (A, MX, NS) dan memeriksa konfigurasi rekod TXT untuk perlindungan pemalsuan email (SPF & DMARC).
-* **Cara Penggunaan:** Masukkan nama domain target dan klik **Cek Rekod DNS** untuk melihat pemetaan infrastruktur dan status proteksi domain.
-* **Manfaat:** Memberikan gambaran ketersediaan infrastruktur domain serta memastikan domain terlindungi dari aksi penipuan identitas.
-
-### 🔐 5. Password Entropy Evaluator
-* **Cara Kerja:** Menghitung nilai matematis kombinasi karakter (*Bit Entropy*: $E = L \times \log_2(R)$) dan mengestimasi waktu pemecahan kata sandi oleh komputer *brute-force* offline (GPU rig).
-* **Cara Penggunaan:** Masukkan kata sandi yang ingin diuji untuk melihat skor bit entropi, variasi karakter, dan estimasi waktu retasnya.
-* **Manfaat:** Mengedukasi pengguna untuk membuat kata sandi yang kuat dan tahan terhadap serangan *Brute-Force*.
-
-### 🔤 6. SOC Text & Payload Encoder / Decoder
-* **Cara Kerja:** Menerjemahkan atau mengacak *string/payload* terselubung menggunakan algoritma enkode/dekode umum (Base64, Hexadecimal, URL-encoding, dan HTML Entities).
-* **Cara Penggunaan:** Pilih metode konversi dan aksi (Encode/Decode), lalu masukkan teks target untuk mendapatkan hasil output secara instan.
-* **Manfaat:** Mempercepat tugas analisis SOC dalam membaca kode atau tautan berbahaya yang diacak (*obfuscated*) oleh peretas.
+1. **🔐 Password Strength & Hash Generator** — Evaluasi keamanan kata sandi dan pembuatan cryptographic hash instan.
+2. **🌐 Domain & IP Lookup** — Pemeriksaan awal entitas domain dan pengalamatan IP.
+3. **🔑 File Hash & Integrity Checker** — Verifikasi integritas berkas (MD5, SHA-1, SHA-256) serta pengujian sampel malware EICAR.
+4. **🔍 DNS Security Inspector** — Pemeriksaan rekod jaringan (A, MX, NS) dan proteksi *email anti-spoofing* (**SPF** & **DMARC**).
+5. **🔐 Password Entropy & Crack Time Evaluator** — Kalkulasi matematis entropi ($E = L \times \log_2(R)$) dan estimasi waktu pembobolan *brute-force* offline.
+6. **🔤 SOC Text & Payload Encoder / Decoder** — Konversi dwi-arah cepat untuk Base64, URL Encoding, Hexadecimal, dan HTML Entities.
+7. **🖼️ EXIF Metadata Inspector & Sanitizer** — Deteksi koordinat GPS tersembunyi pada foto dan pembersihan (*sanitizing*) metadata instan.
+8. **📡 Network Auto-Discovery & Port Sweeper** — Pemindaian subnet lokal otomatis dan pendeteksian port aktif (SSH, HTTP, RTSP, SMB).
+9. **🗺️ IP Threat Intelligence & Geolocation Mapper** — Pemetaan lokasi fisik IP target, identifikasi ISP/ASN, serta penanda risiko (Proxy / VPN / TOR / Hosting).
+10. **🛡️ Web Log Security Parser & Threat Hunter** — Parsing log akses web (Nginx / Apache) untuk perburuan ancaman SQLi, XSS, Path Traversal, dan Command Injection.
 
 ---
 
-## 🛠️ Panduan Instalasi Lokal
+## 🛠️ Prasyarat & Dependensi
 
-Untuk menjalankan platform ini di komputer lokal Anda:
+Pastikan Anda telah menginstal **Python 3.9+** pada sistem Anda. 
 
-1. **Clone Repositori:**
+### Dependensi Library Python:
+* `streamlit`
+* `dnspython`
+* `Pillow`
+* `pandas`
+
+---
+
+## 📥 Instalasi & Jalankan Aplikasi
+
+1. **Clone repository ini / unduh project folder:**
    ```bash
-   git clone [https://github.com/USERNAME_ANDA/blue-team-security-suite.git](https://github.com/USERNAME_ANDA/blue-team-security-suite.git)
-   cd blue-team-security-suite
+   git clone [https://github.com/username/soc-cybersecurity-dashboard.git](https://github.com/username/soc-cybersecurity-dashboard.git)
+   cd soc-cybersecurity-dashboard
