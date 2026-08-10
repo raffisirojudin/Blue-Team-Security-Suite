@@ -421,7 +421,15 @@ with modul_dns:
     st.markdown("### 🔍 DNS Security Inspector")
     st.write("Periksa rekod DNS utama (A, MX, NS) serta keberadaan proteksi email tingkat domain (**SPF** & **DMARC**).")
 
-    domain_input = st.text_input("Masukkan Nama Domain Target:", placeholder="contoh: google.com atau github.com", key="input_dns_domain").strip()
+    import dns.resolver
+
+    use_sample_dns = st.checkbox("Gunakan Sample Domain Simulasi (Offline Mode)", key="chk_sample_dns")
+
+    if use_sample_dns:
+        domain_input = st.text_input("Masukkan Nama Domain Target:", value="securesample.com", key="input_dns_domain_sample")
+    else:
+        domain_input = st.text_input("Masukkan Nama Domain Target:", placeholder="contoh: google.com atau github.com", key="input_dns_domain").strip()
+
     btn_dns = st.button("🔍 Cek Rekod DNS", type="primary", key="btn_dns_check")
 
     if btn_dns and domain_input:
@@ -435,11 +443,19 @@ with modul_dns:
             except Exception:
                 return []
 
-        records_a = fetch_dns(clean_domain, 'A')
-        records_mx = fetch_dns(clean_domain, 'MX')
-        records_ns = fetch_dns(clean_domain, 'NS')
-        records_txt = fetch_dns(clean_domain, 'TXT')
-        records_dmarc = fetch_dns(f"_dmarc.{clean_domain}", 'TXT')
+        if use_sample_dns:
+            # Data Simulasi DNS Records (Offline Mode)
+            records_a = ["192.0.2.1", "192.0.2.2"]
+            records_mx = ["10 mail.securesample.com", "20 mail2.securesample.com"]
+            records_ns = ["ns1.securesample.com", "ns2.securesample.com"]
+            records_txt = ['"v=spf1 ip4:192.0.2.0/24 include:_spf.securesample.com ~all"']
+            records_dmarc = ['"v=DMARC1; p=reject; rua=mailto:dmarc-reports@securesample.com; ruf=mailto:dmarc-forensic@securesample.com"']
+        else:
+            records_a = fetch_dns(clean_domain, 'A')
+            records_mx = fetch_dns(clean_domain, 'MX')
+            records_ns = fetch_dns(clean_domain, 'NS')
+            records_txt = fetch_dns(clean_domain, 'TXT')
+            records_dmarc = fetch_dns(f"_dmarc.{clean_domain}", 'TXT')
 
         tab_dns1, tab_dns2 = st.tabs(["📋 Rekod DNS Jaringan", "🔐 Keamanan Email Domain (SPF & DMARC)"])
 
@@ -476,7 +492,7 @@ with modul_dns:
             spf_found = [txt for txt in records_txt if "v=spf1" in txt]
             st.write("**SPF Record (Sender Policy Framework):**")
             if spf_found:
-                st.success("✅ **SPF Ditemukan!** Domain ini membatasi IP server yang berhak mengirim email atas namaya.")
+                st.success("✅ **SPF Ditemukan!** Domain ini membatasi IP server yang berhak mengirim email atas namanya.")
                 for spf in spf_found:
                     st.code(spf, language="text")
             else:
