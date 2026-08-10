@@ -660,21 +660,12 @@ with modul_network:
     from concurrent.futures import ThreadPoolExecutor
     import pandas as pd
 
-    # Fungsi untuk mengecek IP Publik (ISP) & IP Lokal secara otomatis
+    # --- FUNGSI DENGAN MULTI-API FALLBACK ---
     def dapatkan_info_jaringan():
         pub_ip, isp_name, local_ip = "Tidak diketahui", "Tidak diketahui", "127.0.0.1"
+        
+        # 1. Ambil IP Lokal Perangkat
         try:
-            # Mengambil IP Publik & Nama ISP
-            req = urllib.request.Request("https://ipapi.co/json/", headers={'User-Agent': 'Mozilla/5.0'})
-            with urllib.request.urlopen(req, timeout=3) as response:
-                data = json.loads(response.read().decode())
-                pub_ip = data.get("ip", "Gagal membaca")
-                isp_name = data.get("org", "Gagal membaca")
-        except:
-            pass
-
-        try:
-            # Mengambil IP Lokal Perangkat
             s = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
             s.connect(("8.8.8.8", 80))
             local_ip = s.getsockname()[0]
@@ -682,12 +673,29 @@ with modul_network:
         except:
             pass
 
+        # 2. Ambil IP Publik & ISP (Otomatis berpindah API jika salah satu limit)
+        try:
+            # Jalur Utama: ip-api.com
+            req = urllib.request.Request("http://ip-api.com/json/", headers={'User-Agent': 'Mozilla/5.0'})
+            with urllib.request.urlopen(req, timeout=4) as response:
+                data = json.loads(response.read().decode())
+                pub_ip = data.get("query", "Tidak diketahui")
+                isp_name = data.get("isp", data.get("org", "Tidak diketahui"))
+        except:
+            try:
+                # Cadangan: ipify.org
+                with urllib.request.urlopen("https://api.ipify.org?format=json", timeout=4) as resp:
+                    pub_ip = json.loads(resp.read().decode()).get("ip", "Tidak diketahui")
+                    isp_name = "Terhubung Internet"
+            except:
+                pass
+
         return pub_ip, isp_name, local_ip
 
     # Tampilkan Informasi IP & ISP
     pub_ip, isp_name, local_ip = dapatkan_info_jaringan()
 
-    # Ekstraksi otomatis prefix subnet lokal (misal: "192.168.1.15" -> "192.168.1.")
+    # Ekstraksi otomatis prefix subnet lokal (misal: "10.16.15.41" -> "10.16.15.")
     default_prefix = ".".join(local_ip.split(".")[:-1]) + "." if "." in local_ip else "192.168.1."
 
     st.markdown("##### ℹ️ Informasi Koneksi Wi-Fi / Internet Anda")
