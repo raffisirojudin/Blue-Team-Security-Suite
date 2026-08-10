@@ -209,6 +209,13 @@ with modul_web:
     st.markdown("### 🌐 Website Security Headers & SSL Auditor")
     st.write("Audit konfigurasi HTTP Security Headers dan masa berlaku Sertifikat SSL/TLS domain website.")
 
+    import ssl
+    import socket
+    import requests
+    from urllib.parse import urlparse
+    from datetime import datetime
+    import pandas as pd
+
     SECURITY_HEADERS = {
         "Strict-Transport-Security": {"nama": "HSTS", "bobot": 20, "solusi": "Strict-Transport-Security: max-age=31536000; includeSubDomains"},
         "Content-Security-Policy": {"nama": "CSP", "bobot": 25, "solusi": "Content-Security-Policy: default-src 'self'"},
@@ -242,7 +249,14 @@ with modul_web:
         except Exception as e:
             return {"valid": False, "error": str(e)}
 
-    target_input = st.text_input("Masukkan URL/Domain Website Target:", placeholder="example.com atau https://example.com", key="input_domain_web")
+    # Checkbox Simulasi Sample Domain
+    use_sample_web = st.checkbox("Gunakan Sample Domain Simulasi (Offline Mode)", key="chk_sample_web")
+
+    if use_sample_web:
+        target_input = st.text_input("Masukkan URL/Domain Website Target:", value="https://sample-vulnerable-site.com", key="input_domain_web_sample")
+    else:
+        target_input = st.text_input("Masukkan URL/Domain Website Target:", placeholder="example.com atau https://example.com", key="input_domain_web")
+
     btn_audit = st.button("🔍 Audit Keamanan Web", type="primary", key="btn_audit_web")
 
     if btn_audit and target_input:
@@ -251,13 +265,32 @@ with modul_web:
 
         headers_resp = None
         http_error = None
-        try:
-            resp = requests.get(full_url, timeout=7, allow_redirects=True, headers={'User-Agent': 'SecurityAuditorBot/1.0'})
-            headers_resp = resp.headers
-        except Exception as e:
-            http_error = str(e)
+        ssl_info = None
 
-        ssl_info = audit_ssl(domain)
+        if use_sample_web:
+            # Data Simulasi Header & SSL (Offline Mode)
+            headers_resp = {
+                "Strict-Transport-Security": "max-age=31536000; includeSubDomains",
+                "X-Frame-Options": "SAMEORIGIN",
+                "X-Content-Type-Options": "nosniff",
+                "Server": "nginx/1.18.0 (Ubuntu)",
+                "X-Powered-By": "PHP/7.4.3"
+            }
+            ssl_info = {
+                "valid": True,
+                "tls_version": "TLSv1.3",
+                "exp_date": "15 December 2026",
+                "sisa_hari": 127,
+                "issuer": "Let's Encrypt Authority X3"
+            }
+        else:
+            try:
+                resp = requests.get(full_url, timeout=7, allow_redirects=True, headers={'User-Agent': 'SecurityAuditorBot/1.0'})
+                headers_resp = resp.headers
+            except Exception as e:
+                http_error = str(e)
+
+            ssl_info = audit_ssl(domain)
 
         if http_error:
             st.error(f"❌ Gagal menghubungi situs target: `{http_error}`.")
@@ -319,7 +352,6 @@ add_header X-Frame-Options "SAMEORIGIN" always;
 add_header X-Content-Type-Options "nosniff" always;
 add_header Referrer-Policy "strict-origin-when-cross-origin" always;
 server_tokens off;""", language="nginx")
-
 
 # ==============================================================================
 # MODUL 3: FILE HASH & INTEGRITY CHECKER
