@@ -516,9 +516,18 @@ with modul_pwd:
     st.markdown("### 🔐 Password Entropy & Crack Time Evaluator")
     st.write("Evaluasi kekuatan kata sandi menggunakan rumus matematis **Bit Entropy** ($E = L \\times \\log_2(R)$) serta estimasi waktu *brute-force*.")
 
+    import math
+    import re
+
+    use_sample_pwd = st.checkbox("Gunakan Sample Password Simulasi", key="chk_sample_pwd")
+
     col_p1, col_p2 = st.columns([2, 1])
     with col_p1:
-        pwd_input = st.text_input("Masukkan Kata Sandi yang Ingin Diuji:", type="password", key="input_password_eval").strip()
+        if use_sample_pwd:
+            pwd_input = st.text_input("Masukkan Kata Sandi yang Ingin Diuji:", value="K34m4n4n_S1b3r_2026!", key="input_pwd_sample").strip()
+        else:
+            pwd_input = st.text_input("Masukkan Kata Sandi yang Ingin Diuji:", type="password", key="input_password_eval").strip()
+
     with col_p2:
         st.write("")
         st.write("")
@@ -528,8 +537,6 @@ with modul_pwd:
         st.info(f"Teks Kata Sandi: `{pwd_input}`")
 
     if pwd_input:
-        import math
-
         # Hitung Variasi Karakter (Pool Size - R)
         has_lower = bool(re.search(r'[a-z]', pwd_input))
         has_upper = bool(re.search(r'[A-Z]', pwd_input))
@@ -566,7 +573,7 @@ with modul_pwd:
             elif years >= 1:
                 return f"{years:,.1f} Tahun"
             elif days >= 1:
-                return f"{days:,.1f} Hari"
+                return f"{years:,.1f} Hari"
             elif hours >= 1:
                 return f"{hours:,.1f} Jam"
             elif minutes >= 1:
@@ -579,16 +586,12 @@ with modul_pwd:
         # Penilaian Kekuatan
         if entropy < 40:
             status_label = "Sangat Lemah"
-            status_color = "red"
         elif entropy < 60:
             status_label = "Sedang / Rentan"
-            status_color = "orange"
         elif entropy < 80:
             status_label = "Kuat"
-            status_color = "green"
         else:
             status_label = "Sangat Kuat (Sangat Aman)"
-            status_color = "blue"
 
         st.markdown("---")
         st.subheader("📊 Hasil Evaluasi Kekuatan")
