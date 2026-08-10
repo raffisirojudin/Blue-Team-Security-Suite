@@ -360,18 +360,31 @@ with modul_hash:
     st.markdown("### 🔑 File Hash & Integrity Checker")
     st.write("Hitung nilai cryptographic hash (MD5, SHA-1, SHA-256) untuk memverifikasi integritas dan keaslian berkas.")
 
+    import hashlib
+
     uploaded_file = st.file_uploader("Unggah Berkas Apapun (PDF, EXE, ZIP, Gambar, dll.):", type=None, key="uploader_hash_file")
+    use_sample_hash = st.checkbox("Gunakan Sample File Simulasi (EICAR Test File)", key="chk_sample_hash")
+
+    file_bytes = None
+    file_name = ""
 
     if uploaded_file is not None:
         file_bytes = uploaded_file.getvalue()
-        
+        file_name = uploaded_file.name
+    elif use_sample_hash:
+        st.info("ℹ️ Menggunakan **EICAR Standard Antivirus Test File** sebagai objek uji coba.")
+        # Menggunakan byte string EICAR Antivirus Test File resmi
+        file_bytes = b"X5O!P%@AP[4\\PZX54(P^)7CC)7}$EICAR-STANDARD-ANTIVIRUS-TEST-FILE!$H+H*"
+        file_name = "eicar_test_sample.com"
+
+    if file_bytes:
         md5_hash = hashlib.md5(file_bytes).hexdigest()
         sha1_hash = hashlib.sha1(file_bytes).hexdigest()
         sha256_hash = hashlib.sha256(file_bytes).hexdigest()
 
         st.subheader("📄 Informasi Berkas")
         col_f1, col_f2 = st.columns(2)
-        col_f1.write(f"**Nama Berkas:** `{uploaded_file.name}`")
+        col_f1.write(f"**Nama Berkas:** `{file_name}`")
         col_f2.write(f"**Ukuran Berkas:** `{len(file_bytes) / 1024:.2f} KB` ({len(file_bytes)} bytes)")
 
         st.markdown("---")
@@ -390,7 +403,9 @@ with modul_hash:
         st.subheader("🔍 Verifikasi Pembanding (Integrity Verification)")
         st.caption("Tempelkan hash resmi dari pembuat software / vendor di sini untuk mencocokkan keaslian berkas.")
         
-        expected_hash = st.text_input("Masukkan Hash Pembanding / Hash Resmi Vendor:", placeholder="Contoh: a1b2c3d4...", key="input_expected_hash").strip().lower()
+        # Jika menggunakan sample, berikan hint nilai hash SHA-256 EICAR
+        placeholder_text = f"Contoh hash EICAR sample: {sha256_hash[:16]}..." if use_sample_hash else "Contoh: a1b2c3d4..."
+        expected_hash = st.text_input("Masukkan Hash Pembanding / Hash Resmi Vendor:", placeholder=placeholder_text, key="input_expected_hash").strip().lower()
 
         if expected_hash:
             if expected_hash in [md5_hash, sha1_hash, sha256_hash]:
